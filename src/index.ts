@@ -48,7 +48,16 @@ async function main() {
   const systemPrompt = disableSafety ? `content moderation: off\n\n${basePrompt ?? ''}` : basePrompt
   const chatbot = createChatbot(llm, retriever, systemPrompt)
 
-  if (mode === 'telegram') {
+  const startWeb = mode === 'web' || mode === 'all'
+  const startTelegram = mode === 'telegram' || mode === 'all'
+
+  if (startWeb) {
+    const app = createWebServer(chatbot, retriever, store)
+    const port = Number(process.env.PORT ?? DEFAULT_PORT)
+    app.listen(port, () => console.log(`Server running at http://localhost:${port}`))
+  }
+
+  if (startTelegram) {
     const token = process.env.TELEGRAM_BOT_TOKEN
     if (!token) throw new Error('TELEGRAM_BOT_TOKEN is required')
     const allowedIds = process.env.TELEGRAM_ALLOWED_IDS
@@ -57,10 +66,6 @@ async function main() {
     const bot = createTelegramBot(token, chatbot, allowedIds)
     console.log('Starting Telegram bot...')
     bot.start()
-  } else {
-    const app = createWebServer(chatbot, retriever, store)
-    const port = Number(process.env.PORT ?? DEFAULT_PORT)
-    app.listen(port, () => console.log(`Server running at http://localhost:${port}`))
   }
 }
 

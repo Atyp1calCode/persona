@@ -124,6 +124,12 @@ Run as a Telegram bot:
 npm run dev:telegram
 ```
 
+Run both the web server and Telegram bot together:
+
+```bash
+npm run dev:all
+```
+
 ## Building for production
 
 Build everything (server + client):
@@ -151,10 +157,16 @@ Start as a Telegram bot:
 npm run start:telegram
 ```
 
+Start both the web server and Telegram bot together (recommended — keeps the lore API available):
+
+```bash
+npm run start:all
+```
+
 To keep it running after you disconnect:
 
 ```bash
-nohup npm run start:telegram > persona.log 2>&1 &
+nohup npm run start:all > persona.log 2>&1 &
 ```
 
 ## Testing
