@@ -9,7 +9,7 @@ vi.mock('openai', () => ({
 }))
 
 import { createOpenRouterAdapter } from './openrouter.js'
-import { DEFAULT_OPENROUTER_MODEL } from '../constants.js'
+import { DEFAULT_OPENROUTER_MODEL, GEMINI_SAFETY_SETTINGS } from '../constants.js'
 
 describe('createOpenRouterAdapter', () => {
   beforeEach(() => vi.clearAllMocks())
@@ -60,5 +60,23 @@ describe('createOpenRouterAdapter', () => {
     for await (const _ of createOpenRouterAdapter('key').chat([])) {
     }
     expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ stream: true }))
+  })
+
+  it('omits safety_settings by default', async () => {
+    mockCreate.mockResolvedValue({ [Symbol.asyncIterator]: async function* () {} })
+    for await (const _ of createOpenRouterAdapter('key').chat([])) {
+    }
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.not.objectContaining({ safety_settings: expect.anything() }),
+    )
+  })
+
+  it('includes BLOCK_NONE safety_settings when disableSafety is true', async () => {
+    mockCreate.mockResolvedValue({ [Symbol.asyncIterator]: async function* () {} })
+    for await (const _ of createOpenRouterAdapter('key', undefined, true).chat([])) {
+    }
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ safety_settings: GEMINI_SAFETY_SETTINGS }),
+    )
   })
 })

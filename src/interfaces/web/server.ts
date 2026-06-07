@@ -79,8 +79,13 @@ export function createWebServer(chatbot: Chatbot, retriever: Retriever, store: V
   })
 
   app.delete('/api/history/:sessionId', async (req, res) => {
-    await store.deleteBySession(req.params.sessionId)
-    res.json({ ok: true })
+    try {
+      await store.deleteBySession(req.params.sessionId)
+      res.json({ ok: true })
+    } catch (err) {
+      console.error('Failed to delete session:', err)
+      res.status(500).json({ ok: false, error: String(err) })
+    }
   })
 
   if (process.env.NODE_ENV === 'production') {

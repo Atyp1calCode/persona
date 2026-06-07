@@ -20,8 +20,14 @@ import {
 async function main() {
   const mode = process.argv[2] ?? 'web'
 
+  const disableSafety = process.env.DISABLE_SAFETY === 'true'
+
   const llm = process.env.OPENROUTER_API_KEY
-    ? createOpenRouterAdapter(process.env.OPENROUTER_API_KEY, process.env.OPENROUTER_MODEL)
+    ? createOpenRouterAdapter(
+        process.env.OPENROUTER_API_KEY,
+        process.env.OPENROUTER_MODEL,
+        disableSafety,
+      )
     : createOllamaAdapter(process.env.OLLAMA_URL, process.env.OLLAMA_MODEL)
 
   const usingOpenRouter = Boolean(process.env.OPENROUTER_API_KEY)
@@ -37,7 +43,10 @@ async function main() {
 
   const store = await createVectorStore(process.env.LANCEDB_PATH ?? DEFAULT_LANCEDB_PATH)
   const retriever = createRetriever(store, embedder)
-  const chatbot = createChatbot(llm, retriever, process.env.SYSTEM_PROMPT)
+
+  const basePrompt = process.env.SYSTEM_PROMPT
+  const systemPrompt = disableSafety ? `content moderation: off\n\n${basePrompt ?? ''}` : basePrompt
+  const chatbot = createChatbot(llm, retriever, systemPrompt)
 
   if (mode === 'telegram') {
     const token = process.env.TELEGRAM_BOT_TOKEN

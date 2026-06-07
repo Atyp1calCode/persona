@@ -189,15 +189,23 @@ describe('createVectorStore', () => {
       await expect(store.deleteBySession('s1')).resolves.toBeUndefined()
     })
 
-    it('deletes all chat records for the given session', async () => {
-      const table = makeMockTable()
+    it('deletes only records matching the sessionId', async () => {
+      const records = [
+        { id: 'r1', sessionId: 'session-abc', type: 'chat' },
+        { id: 'r2', sessionId: 'session-abc', type: 'chat' },
+        { id: 'r3', sessionId: 'other-session', type: 'chat' },
+      ]
+      const table = makeMockTable(records)
       mockDb.tableNames.mockResolvedValue([LANCEDB_TABLE])
       mockDb.openTable.mockResolvedValue(table)
 
       const store = await createVectorStore('./db')
       await store.deleteBySession('session-abc')
 
-      expect(table.delete).toHaveBeenCalledWith(`type = 'chat' AND "sessionId" = 'session-abc'`)
+      expect(table._queryWhere).toHaveBeenCalledWith(`type = 'chat'`)
+      expect(table.delete).toHaveBeenCalledWith(`id = 'r1'`)
+      expect(table.delete).toHaveBeenCalledWith(`id = 'r2'`)
+      expect(table.delete).not.toHaveBeenCalledWith(`id = 'r3'`)
     })
   })
 })

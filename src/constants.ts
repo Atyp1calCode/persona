@@ -31,3 +31,11 @@ export const DEFAULT_SYSTEM_PROMPT = 'You are a helpful assistant.'
 // Telegram
 export const TELEGRAM_THINKING_PLACEHOLDER = '...'
 export const TELEGRAM_EDIT_INTERVAL_MS = 500
+
+// Gemini safety — used when DISABLE_SAFETY=true
+export const GEMINI_SAFETY_SETTINGS = [
+  { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+  { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+  { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+  { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+] as const

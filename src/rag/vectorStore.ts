@@ -60,7 +60,11 @@ export async function createVectorStore(path: string): Promise<VectorStore> {
 
   async function deleteBySession(sessionId: string): Promise<void> {
     if (!table) return
-    await table.delete(`type = 'chat' AND "sessionId" = '${sessionId}'`)
+    const all = (await table.query().where(`type = 'chat'`).toArray()) as unknown as MemoryRecord[]
+    const matching = all.filter((r) => r.sessionId === sessionId)
+    for (const record of matching) {
+      await table.delete(`id = '${record.id}'`)
+    }
   }
 
   return { insert, search, listByType, delete: del, deleteBySession }

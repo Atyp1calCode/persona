@@ -32,9 +32,19 @@ export default function History() {
 
   async function clearSession(sessionId: string) {
     setClearing(sessionId)
-    await fetch(`${API_HISTORY}/${encodeURIComponent(sessionId)}`, { method: 'DELETE' })
-    setSessions((prev) => prev.filter((s) => s.sessionId !== sessionId))
-    setClearing(null)
+    try {
+      const res = await fetch(`${API_HISTORY}/${encodeURIComponent(sessionId)}`, {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        setSessions((prev) => prev.filter((s) => s.sessionId !== sessionId))
+      } else {
+        const body = await res.json()
+        console.error('Failed to clear session:', body.error)
+      }
+    } finally {
+      setClearing(null)
+    }
   }
 
   return (
