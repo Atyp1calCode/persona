@@ -1,0 +1,66 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.logo {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+  margin-right: var(--space-4);
+}
+
+.tab {
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-sub);
+  font-weight: 400;
+}
+
+.tab:hover {
+  background: var(--surface-alt);
+  color: var(--text);
+}
+
+.tabActive {
+  background: var(--accent-subtle);
+  border-color: var(--accent-dim);
+  color: var(--accent-bright);
+  font-weight: 500;
+}
+
+.tabActive:hover {
+  background: var(--accent-subtle);
+  color: var(--accent-bright);
+}
+
+.main {
+  flex: 1;
+  overflow: hidden;
+}
+
+.tabPane {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.tabPaneHidden {
+  display: none;
+}

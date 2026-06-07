@@ -1,0 +1,71 @@
+.container {
+  height: 100%;
+  overflow-y: auto;
+  padding: var(--space-6);
+  background: var(--bg);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+  margin-bottom: var(--space-6);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 600px;
+}
+
+.empty {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-style: italic;
+}
+
+.card {
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.sessionId {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--accent);
+}
+
+.clearBtn {
+  background: none;
+  border: none;
+  color: var(--danger);
+  font-size: var(--text-xs);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.clearBtn:hover:not(:disabled) {
+  background: rgba(224, 96, 96, 0.12);
+}
+
+.clearBtn:disabled {
+  color: var(--text-muted);
+}
+
+.meta {
+  color: var(--text-sub);
+  font-size: var(--text-xs);
+}

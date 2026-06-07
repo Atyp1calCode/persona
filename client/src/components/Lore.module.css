@@ -1,0 +1,108 @@
+.container {
+  height: 100%;
+  overflow-y: auto;
+  padding: var(--space-6);
+  background: var(--bg);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+  margin-bottom: var(--space-6);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-8);
+  max-width: 600px;
+}
+
+.input {
+  padding: var(--space-2) var(--space-3);
+  width: 100%;
+}
+
+.textarea {
+  padding: var(--space-2) var(--space-3);
+  resize: vertical;
+  width: 100%;
+  min-height: 100px;
+}
+
+.addBtn {
+  align-self: flex-start;
+  padding: var(--space-2) var(--space-6);
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-weight: 600;
+}
+
+.addBtn:hover:not(:disabled) {
+  background: var(--accent-bright);
+}
+
+.addBtn:disabled {
+  background: var(--surface-high);
+  color: var(--text-muted);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 600px;
+}
+
+.empty {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-style: italic;
+}
+
+.card {
+  padding: var(--space-4);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.cardName {
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--accent-bright);
+}
+
+.deleteBtn {
+  background: none;
+  border: none;
+  color: var(--danger);
+  font-size: var(--text-xs);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.deleteBtn:hover {
+  background: rgba(224, 96, 96, 0.12);
+}
+
+.cardText {
+  color: var(--text-sub);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
