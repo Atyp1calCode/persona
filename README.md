@@ -126,20 +126,35 @@ npm run dev:telegram
 
 ## Building for production
 
+Build everything (server + client):
+
 ```bash
-npm run build:client
+npm run build
 ```
 
-Then start the server (it serves the built client from `dist/client/`):
+Or build separately:
 
 ```bash
-NODE_ENV=production node dist/src/index.js web
+npm run build:server   # compiles TypeScript → dist/
+npm run build:client   # bundles React UI → dist/client/
 ```
 
-Or for Telegram:
+Start the web server (serves the built UI from `dist/client/`):
 
 ```bash
-NODE_ENV=production node dist/src/index.js telegram
+npm run start:web
+```
+
+Start as a Telegram bot:
+
+```bash
+npm run start:telegram
+```
+
+To keep it running after you disconnect:
+
+```bash
+nohup npm run start:telegram > persona.log 2>&1 &
 ```
 
 ## Testing
