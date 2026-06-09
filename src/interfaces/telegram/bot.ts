@@ -19,9 +19,9 @@ export function createTelegramBot(
     return allowedIds.has(chatId) || (userId !== undefined && allowedIds.has(userId))
   }
 
-  bot.on('message:text', async (ctx) => {
+  bot.on('message:text', async (ctx, next) => {
     if (!isAllowed(ctx.chat.id, ctx.from?.id)) return
-    if (ctx.message.entities?.some((e) => e.type === 'bot_command')) return
+    if (ctx.message.entities?.some((e) => e.type === 'bot_command')) return next()
 
     const sessionId = getSession(ctx.chat.id)
     const userMessage = ctx.message.text

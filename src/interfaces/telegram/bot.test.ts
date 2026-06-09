@@ -59,7 +59,10 @@ function makeCommandCtx(chatId: number, match = '') {
 function getMessageHandler(chatbot: Chatbot, store?: VectorStore, allowedIds?: Set<number>) {
   vi.clearAllMocks()
   createTelegramBot('token', chatbot, store ?? makeStore(), allowedIds)
-  return mockBotInstance.on.mock.calls[0][1] as (ctx: ReturnType<typeof makeCtx>) => Promise<void>
+  return mockBotInstance.on.mock.calls[0][1] as (
+    ctx: ReturnType<typeof makeCtx>,
+    next?: () => Promise<void>,
+  ) => Promise<void>
 }
 
 function getCommandHandler(name: string, store?: VectorStore) {
@@ -119,14 +122,16 @@ describe('createTelegramBot', () => {
       expect(lastCall).toEqual([123, 42, 'Hi there'])
     })
 
-    it('ignores messages that are bot commands', async () => {
+    it('does not pass command messages to the LLM', async () => {
       const chatbot = makeChatbot()
       const ctx = {
         ...makeCtx(1, 2, '/clear'),
         message: { text: '/clear', entities: [{ type: 'bot_command', offset: 0, length: 6 }] },
       }
-      await getMessageHandler(chatbot)(ctx)
+      const next = vi.fn().mockResolvedValue(undefined)
+      await getMessageHandler(chatbot)(ctx, next)
       expect(chatbot.chat).not.toHaveBeenCalled()
+      expect(next).toHaveBeenCalled()
     })
 
     it('uses the chat ID as the session ID by default', async () => {
