@@ -1,5 +1,6 @@
 import type { LLMAdapter, Message } from '../adapters/types.js'
 import type { Retriever } from '../rag/retriever.js'
+import type { FactExtractor } from './factExtractor.js'
 import { DEFAULT_SYSTEM_PROMPT } from '../constants.js'
 
 export interface Chatbot {
@@ -10,6 +11,7 @@ export function createChatbot(
   llm: LLMAdapter,
   retriever: Retriever,
   systemPrompt = DEFAULT_SYSTEM_PROMPT,
+  factExtractor?: FactExtractor,
 ): Chatbot {
   return {
     async *chat(userMessage, sessionId) {
@@ -38,6 +40,13 @@ export function createChatbot(
       }
 
       retriever.saveExchange(userMessage, fullResponse, sessionId).catch(console.error)
+
+      if (factExtractor) {
+        factExtractor
+          .extract(userMessage, fullResponse)
+          .then((facts) => Promise.all(facts.map((fact) => retriever.addLore('fact', fact))))
+          .catch(console.error)
+      }
     },
   }
 }

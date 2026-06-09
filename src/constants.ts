@@ -7,6 +7,7 @@ export const DEFAULT_EMBED_MODEL = 'nomic-embed-text'
 // OpenRouter
 export const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
 export const DEFAULT_OPENROUTER_MODEL = 'openai/gpt-4o-mini'
+export const DEFAULT_FACT_EXTRACTOR_MODEL = 'google/gemini-2.0-flash-lite'
 
 // OpenAI (used for embeddings when Ollama is unavailable)
 export const OPENAI_BASE_URL = 'https://api.openai.com/v1'

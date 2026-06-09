@@ -3,6 +3,7 @@ import { createChatbot } from './chatbot.js'
 import type { LLMAdapter } from '../adapters/types.js'
 import type { Retriever } from '../rag/retriever.js'
 import type { MemoryRecord } from '../rag/vectorStore.js'
+import type { FactExtractor } from './factExtractor.js'
 import { DEFAULT_SYSTEM_PROMPT } from '../constants.js'
 
 function makeRecord(text: string, type: 'lore' | 'chat' = 'lore'): MemoryRecord {
@@ -102,5 +103,55 @@ describe('createChatbot', () => {
     }
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(retriever.saveExchange).toHaveBeenCalledWith('hello', 'Hello world', 'session-1')
+  })
+
+  describe('fact extraction', () => {
+    let factExtractor: FactExtractor
+
+    beforeEach(() => {
+      factExtractor = {
+        extract: vi.fn().mockResolvedValue([]),
+      }
+    })
+
+    it('calls the fact extractor with the user message and full response', async () => {
+      for await (const _ of createChatbot(llm, retriever, undefined, factExtractor).chat(
+        'my name is Dave',
+        's1',
+      )) {
+      }
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(factExtractor.extract).toHaveBeenCalledWith('my name is Dave', 'Hello world')
+    })
+
+    it('saves each extracted fact as lore', async () => {
+      vi.mocked(factExtractor.extract).mockResolvedValue(["User's name is Dave", 'User is 30'])
+      for await (const _ of createChatbot(llm, retriever, undefined, factExtractor).chat(
+        'hi',
+        's1',
+      )) {
+      }
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(retriever.addLore).toHaveBeenCalledWith('fact', "User's name is Dave")
+      expect(retriever.addLore).toHaveBeenCalledWith('fact', 'User is 30')
+    })
+
+    it('does not call addLore when no facts are extracted', async () => {
+      vi.mocked(factExtractor.extract).mockResolvedValue([])
+      for await (const _ of createChatbot(llm, retriever, undefined, factExtractor).chat(
+        'hi',
+        's1',
+      )) {
+      }
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(retriever.addLore).not.toHaveBeenCalled()
+    })
+
+    it('does not run fact extraction when no extractor is provided', async () => {
+      for await (const _ of createChatbot(llm, retriever).chat('hi', 's1')) {
+      }
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(retriever.addLore).not.toHaveBeenCalled()
+    })
   })
 })

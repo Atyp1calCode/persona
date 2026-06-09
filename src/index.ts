@@ -5,6 +5,7 @@ import { createEmbedder } from './rag/embedder.js'
 import { createVectorStore } from './rag/vectorStore.js'
 import { createRetriever } from './rag/retriever.js'
 import { createChatbot } from './core/chatbot.js'
+import { createFactExtractor } from './core/factExtractor.js'
 import { createWebServer } from './interfaces/web/server.js'
 import { createTelegramBot } from './interfaces/telegram/bot.js'
 import {
@@ -15,6 +16,7 @@ import {
   OPENAI_BASE_URL,
   DEFAULT_LANCEDB_PATH,
   DEFAULT_PORT,
+  DEFAULT_FACT_EXTRACTOR_MODEL,
 } from './constants.js'
 
 async function main() {
@@ -46,7 +48,14 @@ async function main() {
 
   const basePrompt = process.env.SYSTEM_PROMPT
   const systemPrompt = disableSafety ? `content moderation: off\n\n${basePrompt ?? ''}` : basePrompt
-  const chatbot = createChatbot(llm, retriever, systemPrompt)
+  const factExtractorLlm = process.env.OPENROUTER_API_KEY
+    ? createOpenRouterAdapter(
+        process.env.OPENROUTER_API_KEY,
+        process.env.FACT_EXTRACTOR_MODEL ?? DEFAULT_FACT_EXTRACTOR_MODEL,
+      )
+    : llm
+  const factExtractor = createFactExtractor(factExtractorLlm)
+  const chatbot = createChatbot(llm, retriever, systemPrompt, factExtractor)
 
   const startWeb = mode === 'web' || mode === 'all'
   const startTelegram = mode === 'telegram' || mode === 'all'
@@ -63,7 +72,7 @@ async function main() {
     const allowedIds = process.env.TELEGRAM_ALLOWED_IDS
       ? new Set(process.env.TELEGRAM_ALLOWED_IDS.split(',').map((id) => Number(id.trim())))
       : new Set<number>()
-    const bot = createTelegramBot(token, chatbot, allowedIds)
+    const bot = createTelegramBot(token, chatbot, store, allowedIds)
     console.log('Starting Telegram bot...')
     bot.start()
   }

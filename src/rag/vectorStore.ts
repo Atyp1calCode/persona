@@ -15,6 +15,7 @@ export interface VectorStore {
   insert(records: Omit<MemoryRecord, 'id'>[]): Promise<string[]>
   search(vector: number[], limit?: number, filter?: string): Promise<MemoryRecord[]>
   listByType(type: 'lore' | 'chat'): Promise<MemoryRecord[]>
+  getRecentBySession(sessionId: string, limit: number): Promise<MemoryRecord[]>
   delete(id: string): Promise<void>
   deleteBySession(sessionId: string): Promise<void>
 }
@@ -58,6 +59,21 @@ export async function createVectorStore(path: string): Promise<VectorStore> {
     await table.delete(`id = '${id}'`)
   }
 
+  async function getRecentBySession(sessionId: string, limit: number): Promise<MemoryRecord[]> {
+    if (!table) return []
+    const records = (await table
+      .query()
+      .where(`type = 'chat' AND "sessionId" = '${sessionId}'`)
+      .toArray()) as unknown as MemoryRecord[]
+    return records
+      .sort((a, b) => {
+        const tA = (JSON.parse(a.metadata) as { timestamp?: number }).timestamp ?? 0
+        const tB = (JSON.parse(b.metadata) as { timestamp?: number }).timestamp ?? 0
+        return tA - tB
+      })
+      .slice(-limit)
+  }
+
   async function deleteBySession(sessionId: string): Promise<void> {
     if (!table) return
     const all = (await table.query().where(`type = 'chat'`).toArray()) as unknown as MemoryRecord[]
@@ -67,5 +83,5 @@ export async function createVectorStore(path: string): Promise<VectorStore> {
     }
   }
 
-  return { insert, search, listByType, delete: del, deleteBySession }
+  return { insert, search, listByType, getRecentBySession, delete: del, deleteBySession }
 }

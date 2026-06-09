@@ -21,10 +21,18 @@ export function createRetriever(
   return {
     async retrieve(query, sessionId) {
       const vector = await embedder.embed(query)
-      const [lore, history] = await Promise.all([
+      const [lore, semantic, recent] = await Promise.all([
         store.search(vector, topK, `type = 'lore'`),
         store.search(vector, topK, `type = 'chat' AND "sessionId" = '${sessionId}'`),
+        store.getRecentBySession(sessionId, topK),
       ])
+      const seen = new Set(recent.map((r) => r.id))
+      const extra = semantic.filter((r) => !seen.has(r.id))
+      const history = [...extra, ...recent].sort((a, b) => {
+        const tA = (JSON.parse(a.metadata) as { timestamp?: number }).timestamp ?? 0
+        const tB = (JSON.parse(b.metadata) as { timestamp?: number }).timestamp ?? 0
+        return tA - tB
+      })
       return { lore, history }
     },
 

@@ -27,6 +27,7 @@ describe('createRetriever', () => {
       insert: vi.fn().mockResolvedValue(['new-id']),
       search: vi.fn().mockResolvedValue([]),
       listByType: vi.fn().mockResolvedValue([]),
+      getRecentBySession: vi.fn().mockResolvedValue([]),
       delete: vi.fn().mockResolvedValue(undefined),
       deleteBySession: vi.fn().mockResolvedValue(undefined),
     }
@@ -55,12 +56,23 @@ describe('createRetriever', () => {
       )
     })
 
-    it('returns lore and history records', async () => {
+    it('fetches recent history for the session', async () => {
+      await createRetriever(store, embedder).retrieve('query', 'session-1')
+      expect(store.getRecentBySession).toHaveBeenCalledWith('session-1', DEFAULT_TOP_K)
+    })
+
+    it('returns lore and merges semantic + recent history', async () => {
       const loreRecord = makeRecord({ type: 'lore' })
-      const chatRecord = makeRecord({ type: 'chat', sessionId: 's1' })
+      const chatRecord = makeRecord({
+        id: 'c1',
+        type: 'chat',
+        sessionId: 's1',
+        metadata: JSON.stringify({ timestamp: 1000 }),
+      })
       vi.mocked(store.search)
         .mockResolvedValueOnce([loreRecord])
         .mockResolvedValueOnce([chatRecord])
+      vi.mocked(store.getRecentBySession).mockResolvedValue([chatRecord])
 
       const result = await createRetriever(store, embedder).retrieve('q', 's1')
 
@@ -68,9 +80,57 @@ describe('createRetriever', () => {
       expect(result.history).toEqual([chatRecord])
     })
 
+    it('deduplicates records that appear in both semantic and recent results', async () => {
+      const shared = makeRecord({
+        id: 'shared',
+        type: 'chat',
+        sessionId: 's1',
+        metadata: JSON.stringify({ timestamp: 2000 }),
+      })
+      const semanticOnly = makeRecord({
+        id: 'sem',
+        type: 'chat',
+        sessionId: 's1',
+        metadata: JSON.stringify({ timestamp: 1000 }),
+      })
+      vi.mocked(store.search)
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([shared, semanticOnly])
+      vi.mocked(store.getRecentBySession).mockResolvedValue([shared])
+
+      const result = await createRetriever(store, embedder).retrieve('q', 's1')
+
+      const ids = result.history.map((r) => r.id)
+      expect(ids).toContain('shared')
+      expect(ids).toContain('sem')
+      expect(ids.filter((id) => id === 'shared')).toHaveLength(1)
+    })
+
+    it('returns history sorted chronologically by timestamp', async () => {
+      const older = makeRecord({
+        id: 'old',
+        type: 'chat',
+        sessionId: 's1',
+        metadata: JSON.stringify({ timestamp: 1000 }),
+      })
+      const newer = makeRecord({
+        id: 'new',
+        type: 'chat',
+        sessionId: 's1',
+        metadata: JSON.stringify({ timestamp: 2000 }),
+      })
+      vi.mocked(store.search).mockResolvedValueOnce([]).mockResolvedValueOnce([newer])
+      vi.mocked(store.getRecentBySession).mockResolvedValue([older])
+
+      const result = await createRetriever(store, embedder).retrieve('q', 's1')
+
+      expect(result.history.map((r) => r.id)).toEqual(['old', 'new'])
+    })
+
     it('respects a custom topK value', async () => {
       await createRetriever(store, embedder, 10).retrieve('q', 's1')
       expect(store.search).toHaveBeenCalledWith(VECTOR, 10, expect.any(String))
+      expect(store.getRecentBySession).toHaveBeenCalledWith(expect.any(String), 10)
     })
   })
 

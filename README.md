@@ -2,6 +2,12 @@
 
 A RAG-powered chatbot with long-term memory. Chat through a browser UI or Telegram. Stores both lore (background knowledge) and conversation history in a local vector database, retrieving relevant context on every message.
 
+Memory works in two ways:
+
+- **Recent history** — the last N exchanges are always included, so the bot never forgets something you said a moment ago.
+- **Semantic retrieval** — older exchanges relevant to the current topic are pulled in by vector similarity.
+- **Fact extraction** — after each reply, a lightweight LLM pass extracts any personal facts you shared (name, preferences, etc.) and saves them as permanent lore, so they're never lost no matter how long the conversation grows.
+
 ## Architecture
 
 ```
@@ -58,6 +64,7 @@ cp .env.example .env
 | `OLLAMA_MODEL`         | `llama3.2`                                                          | Chat model when using Ollama                                                     |
 | `OPENROUTER_API_KEY`   | —                                                                   | If set, switches LLM backend to OpenRouter                                       |
 | `OPENROUTER_MODEL`     | `openai/gpt-4o-mini`                                                | Model slug when using OpenRouter                                                 |
+| `FACT_EXTRACTOR_MODEL` | `google/gemini-2.0-flash-lite`                                      | Cheap model used for background fact extraction (OpenRouter only)                |
 | `OPENAI_API_KEY`       | —                                                                   | OpenAI key for embeddings when using OpenRouter                                  |
 | `EMBED_MODEL`          | `nomic-embed-text` (Ollama) / `text-embedding-3-small` (OpenRouter) | Embedding model                                                                  |
 | `EMBED_BASE_URL`       | Ollama URL or `https://api.openai.com/v1`                           | Override the embedding service endpoint                                          |
@@ -77,6 +84,9 @@ OLLAMA_URL=http://localhost:11434/v1
 OLLAMA_MODEL=llama3.2
 # OPENROUTER_API_KEY=your-key-here
 # OPENROUTER_MODEL=openai/gpt-4o-mini
+
+# Fact extraction model (OpenRouter only; defaults to a cheap fast model)
+# FACT_EXTRACTOR_MODEL=google/gemini-2.0-flash-lite
 
 # Embeddings (always Ollama)
 EMBED_MODEL=nomic-embed-text
@@ -123,6 +133,15 @@ Run as a Telegram bot:
 ```bash
 npm run dev:telegram
 ```
+
+### Telegram commands
+
+| Command          | Description                                                                         |
+| ---------------- | ----------------------------------------------------------------------------------- |
+| `/new [name]`    | Start a new conversation. Optionally give it a name; otherwise a timestamp is used. |
+| `/sessions`      | List all your conversations, with a ✓ on the active one.                            |
+| `/switch <name>` | Switch to an existing conversation (use `default` for the original one).            |
+| `/clear`         | Delete the current conversation's history and reset to the default session.         |
 
 Run both the web server and Telegram bot together:
 

@@ -10,10 +10,11 @@ function makeStore(overrides: Partial<VectorStore> = {}): VectorStore {
     insert: vi.fn().mockResolvedValue(['id']),
     search: vi.fn().mockResolvedValue([]),
     listByType: vi.fn().mockResolvedValue([]),
+    getRecentBySession: vi.fn().mockResolvedValue([]),
     delete: vi.fn().mockResolvedValue(undefined),
     deleteBySession: vi.fn().mockResolvedValue(undefined),
     ...overrides,
-  }
+  } as VectorStore
 }
 
 function makeRetriever(overrides: Partial<Retriever> = {}): Retriever {
