@@ -119,6 +119,16 @@ describe('createTelegramBot', () => {
       expect(lastCall).toEqual([123, 42, 'Hi there'])
     })
 
+    it('ignores messages that are bot commands', async () => {
+      const chatbot = makeChatbot()
+      const ctx = {
+        ...makeCtx(1, 2, '/clear'),
+        message: { text: '/clear', entities: [{ type: 'bot_command', offset: 0, length: 6 }] },
+      }
+      await getMessageHandler(chatbot)(ctx)
+      expect(chatbot.chat).not.toHaveBeenCalled()
+    })
+
     it('uses the chat ID as the session ID by default', async () => {
       const chatbot = makeChatbot()
       const ctx = makeCtx(777, 456, 'hello')
