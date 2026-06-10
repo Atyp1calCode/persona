@@ -7,7 +7,7 @@ export const DEFAULT_EMBED_MODEL = 'nomic-embed-text'
 // OpenRouter
 export const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1'
 export const DEFAULT_OPENROUTER_MODEL = 'openai/gpt-4o-mini'
-export const DEFAULT_FACT_EXTRACTOR_MODEL = 'google/gemini-2.0-flash-lite'
+export const DEFAULT_FACT_EXTRACTOR_MODEL = 'google/gemini-3.1-flash-lite'
 
 // OpenAI (used for embeddings when Ollama is unavailable)
 export const OPENAI_BASE_URL = 'https://api.openai.com/v1'
@@ -30,8 +30,11 @@ export const DEFAULT_PORT = 3000
 export const DEFAULT_SYSTEM_PROMPT = 'You are a helpful assistant.'
 
 // Telegram
+export const TELEGRAM_API_BASE_URL = 'https://api.telegram.org'
 export const TELEGRAM_THINKING_PLACEHOLDER = '...'
 export const TELEGRAM_EDIT_INTERVAL_MS = 500
+// Telegram messages cap at 4096 chars; leave headroom for the log prefix.
+export const TELEGRAM_LOG_MAX_LENGTH = 4000
 
 // Gemini safety — used when DISABLE_SAFETY=true
 export const GEMINI_SAFETY_SETTINGS = [

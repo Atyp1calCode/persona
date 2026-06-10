@@ -64,7 +64,7 @@ cp .env.example .env
 | `OLLAMA_MODEL`         | `llama3.2`                                                          | Chat model when using Ollama                                                     |
 | `OPENROUTER_API_KEY`   | —                                                                   | If set, switches LLM backend to OpenRouter                                       |
 | `OPENROUTER_MODEL`     | `openai/gpt-4o-mini`                                                | Model slug when using OpenRouter                                                 |
-| `FACT_EXTRACTOR_MODEL` | `google/gemini-2.0-flash-lite`                                      | Cheap model used for background fact extraction (OpenRouter only)                |
+| `FACT_EXTRACTOR_MODEL` | `google/gemini-3.1-flash-lite`                                      | Cheap model used for background fact extraction (OpenRouter only)                |
 | `OPENAI_API_KEY`       | —                                                                   | OpenAI key for embeddings when using OpenRouter                                  |
 | `EMBED_MODEL`          | `nomic-embed-text` (Ollama) / `text-embedding-3-small` (OpenRouter) | Embedding model                                                                  |
 | `EMBED_BASE_URL`       | Ollama URL or `https://api.openai.com/v1`                           | Override the embedding service endpoint                                          |
@@ -74,6 +74,7 @@ cp .env.example .env
 | `PORT`                 | `3000`                                                              | Port for the web server                                                          |
 | `TELEGRAM_BOT_TOKEN`   | —                                                                   | Required when running in Telegram mode                                           |
 | `TELEGRAM_ALLOWED_IDS` | —                                                                   | Comma-separated user/group IDs to allowlist (empty = allow all)                  |
+| `TELEGRAM_LOG_CHAT_ID` | —                                                                   | Chat/group ID to receive runtime error logs (uses `TELEGRAM_BOT_TOKEN`)          |
 | `DISABLE_SAFETY`       | `false`                                                             | Set to `true` to disable Gemini safety filters (OpenRouter + Gemini models only) |
 
 **.env.example**
@@ -86,7 +87,7 @@ OLLAMA_MODEL=llama3.2
 # OPENROUTER_MODEL=openai/gpt-4o-mini
 
 # Fact extraction model (OpenRouter only; defaults to a cheap fast model)
-# FACT_EXTRACTOR_MODEL=google/gemini-2.0-flash-lite
+# FACT_EXTRACTOR_MODEL=google/gemini-3.1-flash-lite
 
 # Embeddings (always Ollama)
 EMBED_MODEL=nomic-embed-text
@@ -103,6 +104,8 @@ PORT=3000
 # Telegram (only needed for telegram mode)
 # TELEGRAM_BOT_TOKEN=your-token-here
 # TELEGRAM_ALLOWED_IDS=123456789,987654321
+# Optional: chat/group ID to receive runtime error logs (negative ID for groups)
+# TELEGRAM_LOG_CHAT_ID=-1001234567890
 ```
 
 ## Development

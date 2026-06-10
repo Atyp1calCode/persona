@@ -6,6 +6,7 @@ import { createVectorStore } from './rag/vectorStore.js'
 import { createRetriever } from './rag/retriever.js'
 import { createChatbot } from './core/chatbot.js'
 import { createFactExtractor } from './core/factExtractor.js'
+import { createLogger } from './core/logger.js'
 import { createWebServer } from './interfaces/web/server.js'
 import { createTelegramBot } from './interfaces/telegram/bot.js'
 import {
@@ -55,7 +56,11 @@ async function main() {
       )
     : llm
   const factExtractor = createFactExtractor(factExtractorLlm)
-  const chatbot = createChatbot(llm, retriever, systemPrompt, factExtractor)
+  const logger = createLogger({
+    botToken: process.env.TELEGRAM_BOT_TOKEN,
+    chatId: process.env.TELEGRAM_LOG_CHAT_ID,
+  })
+  const chatbot = createChatbot(llm, retriever, systemPrompt, factExtractor, logger)
 
   const startWeb = mode === 'web' || mode === 'all'
   const startTelegram = mode === 'telegram' || mode === 'all'
@@ -72,7 +77,7 @@ async function main() {
     const allowedIds = process.env.TELEGRAM_ALLOWED_IDS
       ? new Set(process.env.TELEGRAM_ALLOWED_IDS.split(',').map((id) => Number(id.trim())))
       : new Set<number>()
-    const bot = createTelegramBot(token, chatbot, store, allowedIds)
+    const bot = createTelegramBot(token, chatbot, store, allowedIds, logger)
     console.log('Starting Telegram bot...')
     bot.start()
   }

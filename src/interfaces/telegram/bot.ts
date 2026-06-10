@@ -1,6 +1,7 @@
 import { Bot } from 'grammy'
 import type { Chatbot } from '../../core/chatbot.js'
 import type { VectorStore } from '../../rag/vectorStore.js'
+import { createLogger, type Logger } from '../../core/logger.js'
 import { TELEGRAM_THINKING_PLACEHOLDER, TELEGRAM_EDIT_INTERVAL_MS } from '../../constants.js'
 
 export function createTelegramBot(
@@ -8,6 +9,7 @@ export function createTelegramBot(
   chatbot: Chatbot,
   store: VectorStore,
   allowedIds: Set<number> = new Set(),
+  logger: Logger = createLogger(),
 ) {
   const bot = new Bot(token)
   const activeSessions = new Map<number, string>()
@@ -88,7 +90,7 @@ export function createTelegramBot(
     await ctx.reply(`Switched to conversation: "${name}"`)
   })
 
-  bot.catch((err) => console.error('Bot error:', err))
+  bot.catch((err) => logger.error('telegram: unhandled bot error', err))
 
   return bot
 }
