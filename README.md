@@ -2,11 +2,14 @@
 
 A RAG-powered chatbot with long-term memory. Chat through a browser UI or Telegram. Stores both lore (background knowledge) and conversation history in a local vector database, retrieving relevant context on every message.
 
-Memory works in two ways:
+Memory works in several layers, kept deliberately separate so background context never derails the live conversation:
 
-- **Recent history** — the last N exchanges are always included, so the bot never forgets something you said a moment ago.
-- **Semantic retrieval** — older exchanges relevant to the current topic are pulled in by vector similarity.
+- **Recent turns** — the last N exchanges are replayed as real `user`/`assistant` messages, so the model stays anchored to the actual conversation instead of reconstructing it from a text blob.
+- **Semantic recall** — older exchanges relevant to the current topic are pulled in by vector similarity, but surfaced as clearly-labeled background (not interleaved into the live timeline) so a stale, unrelated message can't hijack the current topic.
+- **Lore** — background facts retrieved per message.
 - **Fact extraction** — after each reply, a lightweight LLM pass extracts any personal facts you shared (name, preferences, etc.) and saves them as permanent lore, so they're never lost no matter how long the conversation grows.
+
+Retrieved lore and recall are filtered by a cosine-distance **relevance threshold**, so weakly-related context is dropped entirely rather than padded in and repeated. Retrieval is tuned via constants in [`src/constants.ts`](src/constants.ts) — `DEFAULT_RECENT_TURNS`, `DEFAULT_RECALL_LIMIT`, `DEFAULT_LORE_LIMIT`, and `DEFAULT_RELEVANCE_MAX_DISTANCE` (lower = stricter).
 
 ## Architecture
 

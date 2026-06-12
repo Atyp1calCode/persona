@@ -20,14 +20,33 @@ export const APP_REFERER = 'http://localhost:3000'
 // Vector store
 export const LANCEDB_TABLE = 'memory'
 export const DEFAULT_SEARCH_LIMIT = 5
-export const DEFAULT_TOP_K = 5
 export const DEFAULT_LANCEDB_PATH = './data/lancedb'
+
+// Retrieval
+// Number of most-recent exchanges replayed verbatim as real chat turns (keeps the model on-topic).
+export const DEFAULT_RECENT_TURNS = 6
+// Older, semantically-similar exchanges surfaced as background recall (excludes the recent window).
+export const DEFAULT_RECALL_LIMIT = 3
+// Background facts (lore) surfaced per turn.
+export const DEFAULT_LORE_LIMIT = 5
+// Cosine distance cutoff for lore/recall: 0 = identical, 1 = unrelated, 2 = opposite.
+// Matches below this are kept; weaker matches are dropped so irrelevant context isn't injected.
+export const DEFAULT_RELEVANCE_MAX_DISTANCE = 0.6
 
 // Web server
 export const DEFAULT_PORT = 3000
 
 // Chatbot
 export const DEFAULT_SYSTEM_PROMPT = 'You are a helpful assistant.'
+// Appended to the system prompt when retrieved context is present. Tells the model to treat
+// background as optional reference — not something to recite — and to stay anchored to the
+// current conversation so it doesn't drift onto stale topics (e.g. an old, unrelated location).
+export const CONTEXT_USAGE_NOTE =
+  'The sections below are background reference retrieved from memory. ' +
+  'Use a detail only if it is directly relevant to the current message, and weave it in naturally — ' +
+  'never list, recite, or repeat these facts unprompted. ' +
+  'Prioritise the ongoing conversation above; if background context conflicts with what the user is ' +
+  'saying now, follow the current conversation.'
 
 // Telegram
 export const TELEGRAM_API_BASE_URL = 'https://api.telegram.org'

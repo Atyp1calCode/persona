@@ -9,6 +9,8 @@ export interface MemoryRecord {
   type: 'lore' | 'chat'
   sessionId: string
   metadata: string
+  /** Cosine distance from the query vector (0 = identical). Only present on search results. */
+  distance?: number
 }
 
 export interface VectorStore {
@@ -44,9 +46,12 @@ export async function createVectorStore(path: string): Promise<VectorStore> {
     filter?: string,
   ): Promise<MemoryRecord[]> {
     if (!table) return []
-    let q = table.search(vector).limit(limit)
+    // Cosine distance is magnitude-independent, so the relevance threshold in the retriever
+    // behaves consistently regardless of which embedding model produced the vectors.
+    let q = (table.search(vector) as lancedb.VectorQuery).distanceType('cosine').limit(limit)
     if (filter) q = q.where(filter)
-    return (await q.toArray()) as unknown as MemoryRecord[]
+    const rows = (await q.toArray()) as unknown as (MemoryRecord & { _distance?: number })[]
+    return rows.map(({ _distance, ...rest }) => ({ ...rest, distance: _distance }))
   }
 
   async function listByType(type: 'lore' | 'chat'): Promise<MemoryRecord[]> {

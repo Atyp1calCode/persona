@@ -17,15 +17,17 @@ function makeMockTable(results: object[] = []) {
   const toArray = vi.fn().mockResolvedValue(results)
   const where = vi.fn().mockReturnValue({ toArray })
   const limit = vi.fn().mockReturnValue({ where, toArray })
+  const distanceType = vi.fn().mockReturnValue({ limit })
   const queryWhere = vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue(results) })
 
   return {
-    search: vi.fn().mockReturnValue({ limit }),
+    search: vi.fn().mockReturnValue({ distanceType }),
     add: vi.fn().mockResolvedValue(undefined),
     delete: vi.fn().mockResolvedValue(undefined),
     query: vi.fn().mockReturnValue({ where: queryWhere }),
     _limit: limit,
     _where: where,
+    _distanceType: distanceType,
     _toArray: toArray,
     _queryWhere: queryWhere,
   }

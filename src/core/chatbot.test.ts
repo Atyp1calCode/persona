@@ -22,7 +22,7 @@ describe('createChatbot', () => {
       }),
     }
     retriever = {
-      retrieve: vi.fn().mockResolvedValue({ lore: [], history: [] }),
+      retrieve: vi.fn().mockResolvedValue({ lore: [], recall: [], recent: [] }),
       saveExchange: vi.fn().mockResolvedValue(undefined),
       addLore: vi.fn().mockResolvedValue('id'),
     }
@@ -66,29 +66,55 @@ describe('createChatbot', () => {
   it('injects lore into the system prompt when available', async () => {
     vi.mocked(retriever.retrieve).mockResolvedValue({
       lore: [makeRecord('Dragons exist.')],
-      history: [],
+      recall: [],
+      recent: [],
     })
 
     for await (const _ of createChatbot(llm, retriever).chat('tell me', 's1')) {
     }
 
     const systemContent = vi.mocked(llm.chat).mock.calls[0][0][0].content
-    expect(systemContent).toContain('## Relevant Knowledge')
+    expect(systemContent).toContain('## Background knowledge')
     expect(systemContent).toContain('Dragons exist.')
   })
 
-  it('injects history into the system prompt when available', async () => {
+  it('injects semantic recall into the system prompt as separate background', async () => {
     vi.mocked(retriever.retrieve).mockResolvedValue({
       lore: [],
-      history: [makeRecord('User: hello\nAssistant: hi', 'chat')],
+      recall: [makeRecord('User: where do I live?\nAssistant: Berlin', 'chat')],
+      recent: [],
     })
 
     for await (const _ of createChatbot(llm, retriever).chat('again', 's1')) {
     }
 
     const systemContent = vi.mocked(llm.chat).mock.calls[0][0][0].content
-    expect(systemContent).toContain('## Relevant Past Exchanges')
-    expect(systemContent).toContain('User: hello\nAssistant: hi')
+    expect(systemContent).toContain('## Possibly related earlier messages')
+    expect(systemContent).toContain('User: where do I live?\nAssistant: Berlin')
+  })
+
+  it('replays recent exchanges as real user/assistant turns', async () => {
+    vi.mocked(retriever.retrieve).mockResolvedValue({
+      lore: [],
+      recall: [],
+      recent: [
+        { user: 'my name is Dave', assistant: 'Nice to meet you, Dave!' },
+        { user: 'I live in Berlin', assistant: 'Got it.' },
+      ],
+    })
+
+    for await (const _ of createChatbot(llm, retriever).chat('where do I live?', 's1')) {
+    }
+
+    const messages = vi.mocked(llm.chat).mock.calls[0][0]
+    expect(messages).toEqual([
+      { role: 'system', content: expect.any(String) },
+      { role: 'user', content: 'my name is Dave' },
+      { role: 'assistant', content: 'Nice to meet you, Dave!' },
+      { role: 'user', content: 'I live in Berlin' },
+      { role: 'assistant', content: 'Got it.' },
+      { role: 'user', content: 'where do I live?' },
+    ])
   })
 
   it('does not modify the system prompt when there is no context', async () => {

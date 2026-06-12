@@ -2,7 +2,7 @@ import type { LLMAdapter, Message } from '../adapters/types.js'
 import type { Retriever } from '../rag/retriever.js'
 import type { FactExtractor } from './factExtractor.js'
 import { createLogger, type Logger } from './logger.js'
-import { DEFAULT_SYSTEM_PROMPT } from '../constants.js'
+import { DEFAULT_SYSTEM_PROMPT, CONTEXT_USAGE_NOTE } from '../constants.js'
 
 export interface Chatbot {
   chat(userMessage: string, sessionId: string): AsyncGenerator<string>
@@ -17,23 +17,32 @@ export function createChatbot(
 ): Chatbot {
   return {
     async *chat(userMessage, sessionId) {
-      const { lore, history } = await retriever.retrieve(userMessage, sessionId)
+      const { lore, recall, recent } = await retriever.retrieve(userMessage, sessionId)
 
       const contextParts: string[] = []
       if (lore.length > 0) {
-        contextParts.push('## Relevant Knowledge\n' + lore.map((r) => r.text).join('\n\n'))
+        contextParts.push('## Background knowledge\n' + lore.map((r) => r.text).join('\n'))
       }
-      if (history.length > 0) {
-        contextParts.push('## Relevant Past Exchanges\n' + history.map((r) => r.text).join('\n\n'))
+      if (recall.length > 0) {
+        contextParts.push(
+          '## Possibly related earlier messages (may be unrelated to the current topic)\n' +
+            recall.map((r) => r.text).join('\n\n'),
+        )
       }
 
       const systemContent =
-        contextParts.length > 0 ? `${systemPrompt}\n\n${contextParts.join('\n\n')}` : systemPrompt
+        contextParts.length > 0
+          ? `${systemPrompt}\n\n${CONTEXT_USAGE_NOTE}\n\n${contextParts.join('\n\n')}`
+          : systemPrompt
 
-      const messages: Message[] = [
-        { role: 'system', content: systemContent },
-        { role: 'user', content: userMessage },
-      ]
+      // Replay recent exchanges as real turns so the model stays anchored to the live conversation,
+      // rather than reconstructing it from a text blob in the system prompt.
+      const messages: Message[] = [{ role: 'system', content: systemContent }]
+      for (const turn of recent) {
+        messages.push({ role: 'user', content: turn.user })
+        messages.push({ role: 'assistant', content: turn.assistant })
+      }
+      messages.push({ role: 'user', content: userMessage })
 
       let fullResponse = ''
       for await (const chunk of llm.chat(messages)) {
