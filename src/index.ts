@@ -17,6 +17,7 @@ import {
   OPENAI_BASE_URL,
   DEFAULT_LANCEDB_PATH,
   DEFAULT_PORT,
+  DEFAULT_HOST,
   DEFAULT_FACT_EXTRACTOR_MODEL,
 } from './constants.js'
 
@@ -53,6 +54,7 @@ async function main() {
     ? createOpenRouterAdapter(
         process.env.OPENROUTER_API_KEY,
         process.env.FACT_EXTRACTOR_MODEL ?? DEFAULT_FACT_EXTRACTOR_MODEL,
+        disableSafety,
       )
     : llm
   const factExtractor = createFactExtractor(factExtractorLlm)
@@ -66,9 +68,12 @@ async function main() {
   const startTelegram = mode === 'telegram' || mode === 'all'
 
   if (startWeb) {
-    const app = createWebServer(chatbot, retriever, store)
+    const app = createWebServer(chatbot, retriever, store, logger)
     const port = Number(process.env.PORT ?? DEFAULT_PORT)
-    app.listen(port, () => console.log(`Server running at http://localhost:${port}`))
+    // Bind to loopback by default — the web API has no auth, so it must not be exposed to the
+    // network unless the operator opts in (HOST=0.0.0.0) behind their own auth/reverse proxy.
+    const host = process.env.HOST ?? DEFAULT_HOST
+    app.listen(port, host, () => console.log(`Server running at http://${host}:${port}`))
   }
 
   if (startTelegram) {
@@ -83,4 +88,10 @@ async function main() {
   }
 }
 
-main().catch(console.error)
+main().catch((err) => {
+  createLogger({
+    botToken: process.env.TELEGRAM_BOT_TOKEN,
+    chatId: process.env.TELEGRAM_LOG_CHAT_ID,
+  }).error('fatal: failed to start', err)
+  process.exitCode = 1
+})

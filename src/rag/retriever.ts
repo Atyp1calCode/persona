@@ -1,5 +1,6 @@
 import type { Embedder } from './embedder.js'
 import type { MemoryRecord, VectorStore } from './vectorStore.js'
+import { chatSessionFilter } from './filters.js'
 import {
   DEFAULT_RECENT_TURNS,
   DEFAULT_RECALL_LIMIT,
@@ -64,11 +65,7 @@ export function createRetriever(
       const [lore, semantic, recentRecords] = await Promise.all([
         store.search(vector, loreLimit, `type = 'lore'`),
         // Over-fetch so that, after removing the recent window, recallLimit older matches remain.
-        store.search(
-          vector,
-          recallLimit + recentTurns,
-          `type = 'chat' AND "sessionId" = '${sessionId}'`,
-        ),
+        store.search(vector, recallLimit + recentTurns, chatSessionFilter(sessionId)),
         store.getRecentBySession(sessionId, recentTurns),
       ])
 

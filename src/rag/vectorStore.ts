@@ -1,6 +1,7 @@
 import * as lancedb from '@lancedb/lancedb'
 import { randomUUID } from 'crypto'
 import { LANCEDB_TABLE, DEFAULT_SEARCH_LIMIT } from '../constants.js'
+import { chatSessionFilter } from './filters.js'
 
 export interface MemoryRecord {
   id: string
@@ -68,7 +69,7 @@ export async function createVectorStore(path: string): Promise<VectorStore> {
     if (!table) return []
     const records = (await table
       .query()
-      .where(`type = 'chat' AND "sessionId" = '${sessionId}'`)
+      .where(chatSessionFilter(sessionId))
       .toArray()) as unknown as MemoryRecord[]
     return records
       .sort((a, b) => {
@@ -81,11 +82,7 @@ export async function createVectorStore(path: string): Promise<VectorStore> {
 
   async function deleteBySession(sessionId: string): Promise<void> {
     if (!table) return
-    const all = (await table.query().where(`type = 'chat'`).toArray()) as unknown as MemoryRecord[]
-    const matching = all.filter((r) => r.sessionId === sessionId)
-    for (const record of matching) {
-      await table.delete(`id = '${record.id}'`)
-    }
+    await table.delete(chatSessionFilter(sessionId))
   }
 
   return { insert, search, listByType, getRecentBySession, delete: del, deleteBySession }

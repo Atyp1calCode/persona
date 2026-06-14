@@ -191,6 +191,22 @@ describe('createWebServer', () => {
       expect(await collectSSE(res)).toMatch(/"sessionId":"[0-9a-f-]+"/)
     })
 
+    it('returns 400 when message is missing', async () => {
+      const res = await request(createWebServer(makeChatbot(), makeRetriever(), makeStore()))
+        .post('/api/chat')
+        .send({ sessionId: 's1' })
+
+      expect(res.status).toBe(400)
+    })
+
+    it('returns 400 when message is empty', async () => {
+      const res = await request(createWebServer(makeChatbot(), makeRetriever(), makeStore()))
+        .post('/api/chat')
+        .send({ message: '   ', sessionId: 's1' })
+
+      expect(res.status).toBe(400)
+    })
+
     it('sends an error event when the chatbot throws', async () => {
       const chatbot: Chatbot = {
         chat: vi.fn().mockImplementation(async function* () {

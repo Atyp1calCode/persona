@@ -35,6 +35,8 @@ export const DEFAULT_RELEVANCE_MAX_DISTANCE = 0.6
 
 // Web server
 export const DEFAULT_PORT = 3000
+// Loopback by default: the web API is unauthenticated, so it must be opted in to network exposure.
+export const DEFAULT_HOST = '127.0.0.1'
 
 // Chatbot
 export const DEFAULT_SYSTEM_PROMPT = 'You are a helpful assistant.'
@@ -52,6 +54,10 @@ export const CONTEXT_USAGE_NOTE =
 export const TELEGRAM_API_BASE_URL = 'https://api.telegram.org'
 export const TELEGRAM_THINKING_PLACEHOLDER = '...'
 export const TELEGRAM_EDIT_INTERVAL_MS = 500
+// Hard limit Telegram enforces per message; longer replies must be split across messages.
+export const TELEGRAM_MESSAGE_MAX_LENGTH = 4096
+// Shown when the model returns nothing (Telegram rejects empty message text).
+export const TELEGRAM_EMPTY_RESPONSE = '(no response)'
 // Telegram messages cap at 4096 chars; leave headroom for the log prefix.
 export const TELEGRAM_LOG_MAX_LENGTH = 4000
 

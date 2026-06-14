@@ -2,7 +2,26 @@ import { Bot } from 'grammy'
 import type { Chatbot } from '../../core/chatbot.js'
 import type { VectorStore } from '../../rag/vectorStore.js'
 import { createLogger, type Logger } from '../../core/logger.js'
-import { TELEGRAM_THINKING_PLACEHOLDER, TELEGRAM_EDIT_INTERVAL_MS } from '../../constants.js'
+import {
+  TELEGRAM_THINKING_PLACEHOLDER,
+  TELEGRAM_EDIT_INTERVAL_MS,
+  TELEGRAM_MESSAGE_MAX_LENGTH,
+  TELEGRAM_EMPTY_RESPONSE,
+} from '../../constants.js'
+
+/** Splits text into chunks no longer than `max`, preferring to break on newline boundaries. */
+function splitMessage(text: string, max: number): string[] {
+  const chunks: string[] = []
+  let remaining = text
+  while (remaining.length > max) {
+    const newlineCut = remaining.lastIndexOf('\n', max)
+    const cut = newlineCut > 0 ? newlineCut : max
+    chunks.push(remaining.slice(0, cut))
+    remaining = remaining.slice(cut).replace(/^\n/, '')
+  }
+  if (remaining.length > 0) chunks.push(remaining)
+  return chunks
+}
 
 export function createTelegramBot(
   token: string,
@@ -34,13 +53,23 @@ export function createTelegramBot(
 
     for await (const chunk of chatbot.chat(userMessage, sessionId)) {
       response += chunk
-      if (Date.now() - lastEdit > TELEGRAM_EDIT_INTERVAL_MS) {
+      // Only live-edit while the response still fits in one message; longer output is split below.
+      if (
+        Date.now() - lastEdit > TELEGRAM_EDIT_INTERVAL_MS &&
+        response.length <= TELEGRAM_MESSAGE_MAX_LENGTH
+      ) {
         await ctx.api.editMessageText(ctx.chat.id, placeholder.message_id, response).catch(() => {})
         lastEdit = Date.now()
       }
     }
 
-    await ctx.api.editMessageText(ctx.chat.id, placeholder.message_id, response).catch(() => {})
+    const chunks = response.trim()
+      ? splitMessage(response, TELEGRAM_MESSAGE_MAX_LENGTH)
+      : [TELEGRAM_EMPTY_RESPONSE]
+    await ctx.api.editMessageText(ctx.chat.id, placeholder.message_id, chunks[0]).catch(() => {})
+    for (const chunk of chunks.slice(1)) {
+      await ctx.reply(chunk).catch(() => {})
+    }
   })
 
   bot.command('new', async (ctx) => {

@@ -6,11 +6,17 @@ import { randomUUID } from 'crypto'
 import type { Chatbot } from '../../core/chatbot.js'
 import type { Retriever } from '../../rag/retriever.js'
 import type { VectorStore } from '../../rag/vectorStore.js'
+import { createLogger, type Logger } from '../../core/logger.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const CLIENT_DIST = path.resolve(__dirname, '../../../dist/client')
 
-export function createWebServer(chatbot: Chatbot, retriever: Retriever, store: VectorStore) {
+export function createWebServer(
+  chatbot: Chatbot,
+  retriever: Retriever,
+  store: VectorStore,
+  logger: Logger = createLogger(),
+) {
   const app = express()
   app.use(cors())
   app.use(express.json())
@@ -21,8 +27,13 @@ export function createWebServer(chatbot: Chatbot, retriever: Retriever, store: V
 
   app.post('/api/chat', async (req, res) => {
     const { message, sessionId = randomUUID() } = req.body as {
-      message: string
+      message?: unknown
       sessionId?: string
+    }
+
+    if (typeof message !== 'string' || message.trim() === '') {
+      res.status(400).json({ error: 'message is required and must be a non-empty string' })
+      return
     }
 
     res.setHeader('Content-Type', 'text/event-stream')
@@ -37,6 +48,7 @@ export function createWebServer(chatbot: Chatbot, retriever: Retriever, store: V
       }
       send({ done: true, sessionId })
     } catch (err) {
+      logger.error('web: /api/chat stream failed', err)
       send({ error: String(err) })
     }
 
@@ -83,7 +95,7 @@ export function createWebServer(chatbot: Chatbot, retriever: Retriever, store: V
       await store.deleteBySession(req.params.sessionId)
       res.json({ ok: true })
     } catch (err) {
-      console.error('Failed to delete session:', err)
+      logger.error('web: failed to delete session', err)
       res.status(500).json({ ok: false, error: String(err) })
     }
   })

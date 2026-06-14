@@ -32,6 +32,8 @@ Two LLM backends are supported and selected automatically at startup:
 
 Embeddings are configured separately from the chat model. When Ollama is used, embeddings default to Ollama (`nomic-embed-text`). When OpenRouter is used, embeddings default to the OpenAI embeddings API (`text-embedding-3-small`) and require an `OPENAI_API_KEY`. Both can be overridden with `EMBED_BASE_URL` and `EMBED_API_KEY` to point at any OpenAI-compatible embedding service.
 
+> ⚠️ **Don't change the embedding model against an existing database.** Different models produce vectors of different dimensions/geometry, which will break or corrupt similarity search on data already stored in `data/lancedb/`. If you switch `EMBED_MODEL`, delete the database directory (or start a fresh `LANCEDB_PATH`) and re-add your lore.
+
 ## Prerequisites
 
 - Node.js 20+
@@ -61,24 +63,25 @@ Copy the example and edit as needed:
 cp .env.example .env
 ```
 
-| Variable               | Default                                                             | Description                                                                      |
-| ---------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `OLLAMA_URL`           | `http://localhost:11434/v1`                                         | Ollama API base URL                                                              |
-| `OLLAMA_MODEL`         | `llama3.2`                                                          | Chat model when using Ollama                                                     |
-| `OPENROUTER_API_KEY`   | —                                                                   | If set, switches LLM backend to OpenRouter                                       |
-| `OPENROUTER_MODEL`     | `openai/gpt-4o-mini`                                                | Model slug when using OpenRouter                                                 |
-| `FACT_EXTRACTOR_MODEL` | `google/gemini-3.1-flash-lite`                                      | Cheap model used for background fact extraction (OpenRouter only)                |
-| `OPENAI_API_KEY`       | —                                                                   | OpenAI key for embeddings when using OpenRouter                                  |
-| `EMBED_MODEL`          | `nomic-embed-text` (Ollama) / `text-embedding-3-small` (OpenRouter) | Embedding model                                                                  |
-| `EMBED_BASE_URL`       | Ollama URL or `https://api.openai.com/v1`                           | Override the embedding service endpoint                                          |
-| `EMBED_API_KEY`        | Derived from backend                                                | Override the embedding service API key                                           |
-| `SYSTEM_PROMPT`        | `You are a helpful assistant.`                                      | Persona / system prompt for the chatbot                                          |
-| `LANCEDB_PATH`         | `./data/lancedb`                                                    | Path to the vector database directory                                            |
-| `PORT`                 | `3000`                                                              | Port for the web server                                                          |
-| `TELEGRAM_BOT_TOKEN`   | —                                                                   | Required when running in Telegram mode                                           |
-| `TELEGRAM_ALLOWED_IDS` | —                                                                   | Comma-separated user/group IDs to allowlist (empty = allow all)                  |
-| `TELEGRAM_LOG_CHAT_ID` | —                                                                   | Chat/group ID to receive runtime error logs (uses `TELEGRAM_BOT_TOKEN`)          |
-| `DISABLE_SAFETY`       | `false`                                                             | Set to `true` to disable Gemini safety filters (OpenRouter + Gemini models only) |
+| Variable               | Default                                                             | Description                                                                                                                                              |
+| ---------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OLLAMA_URL`           | `http://localhost:11434/v1`                                         | Ollama API base URL                                                                                                                                      |
+| `OLLAMA_MODEL`         | `llama3.2`                                                          | Chat model when using Ollama                                                                                                                             |
+| `OPENROUTER_API_KEY`   | —                                                                   | If set, switches LLM backend to OpenRouter                                                                                                               |
+| `OPENROUTER_MODEL`     | `openai/gpt-4o-mini`                                                | Model slug when using OpenRouter                                                                                                                         |
+| `FACT_EXTRACTOR_MODEL` | `google/gemini-3.1-flash-lite`                                      | Cheap model used for background fact extraction (OpenRouter only)                                                                                        |
+| `OPENAI_API_KEY`       | —                                                                   | OpenAI key for embeddings when using OpenRouter                                                                                                          |
+| `EMBED_MODEL`          | `nomic-embed-text` (Ollama) / `text-embedding-3-small` (OpenRouter) | Embedding model                                                                                                                                          |
+| `EMBED_BASE_URL`       | Ollama URL or `https://api.openai.com/v1`                           | Override the embedding service endpoint                                                                                                                  |
+| `EMBED_API_KEY`        | Derived from backend                                                | Override the embedding service API key                                                                                                                   |
+| `SYSTEM_PROMPT`        | `You are a helpful assistant.`                                      | Persona / system prompt for the chatbot                                                                                                                  |
+| `LANCEDB_PATH`         | `./data/lancedb`                                                    | Path to the vector database directory                                                                                                                    |
+| `PORT`                 | `3000`                                                              | Port for the web server                                                                                                                                  |
+| `HOST`                 | `127.0.0.1`                                                         | Web server bind address. Loopback by default; set `0.0.0.0` to expose (the web API is unauthenticated — only do this behind your own auth/reverse proxy) |
+| `TELEGRAM_BOT_TOKEN`   | —                                                                   | Required when running in Telegram mode                                                                                                                   |
+| `TELEGRAM_ALLOWED_IDS` | —                                                                   | Comma-separated user/group IDs to allowlist (empty = allow all)                                                                                          |
+| `TELEGRAM_LOG_CHAT_ID` | —                                                                   | Chat/group ID to receive runtime error logs (uses `TELEGRAM_BOT_TOKEN`)                                                                                  |
+| `DISABLE_SAFETY`       | `false`                                                             | Set to `true` to disable Gemini safety filters (OpenRouter + Gemini models only)                                                                         |
 
 **.env.example**
 
@@ -258,7 +261,7 @@ Add a lore entry (background knowledge the chatbot can retrieve).
 **Request body**
 
 ```json
-{ "text": "The user's name is Alice and she lives in Berlin." }
+{ "name": "Alice", "content": "The user's name is Alice and she lives in Berlin." }
 ```
 
 ### `DELETE /api/lore/:id`

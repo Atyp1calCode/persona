@@ -1,7 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
 import type { Chatbot } from '../../core/chatbot.js'
 import type { VectorStore, MemoryRecord } from '../../rag/vectorStore.js'
-import { TELEGRAM_THINKING_PLACEHOLDER } from '../../constants.js'
+import {
+  TELEGRAM_THINKING_PLACEHOLDER,
+  TELEGRAM_MESSAGE_MAX_LENGTH,
+  TELEGRAM_EMPTY_RESPONSE,
+} from '../../constants.js'
 
 const mockBotInstance = vi.hoisted(() => ({
   on: vi.fn(),
@@ -120,6 +124,27 @@ describe('createTelegramBot', () => {
 
       const lastCall = ctx.api.editMessageText.mock.calls.at(-1)
       expect(lastCall).toEqual([123, 42, 'Hi there'])
+    })
+
+    it('splits a response longer than the Telegram limit across messages', async () => {
+      const long = 'a'.repeat(5000)
+      const ctx = makeCtx(1, 2, 'hi')
+      await getMessageHandler(makeChatbot([long]))(ctx)
+
+      const lastEdit = ctx.api.editMessageText.mock.calls.at(-1)
+      expect(lastEdit?.[2]).toHaveLength(TELEGRAM_MESSAGE_MAX_LENGTH)
+
+      const overflow = ctx.reply.mock.calls.filter((c) => c[0] !== TELEGRAM_THINKING_PLACEHOLDER)
+      expect(overflow).toHaveLength(1)
+      expect(overflow[0][0]).toHaveLength(5000 - TELEGRAM_MESSAGE_MAX_LENGTH)
+    })
+
+    it('shows a fallback when the response is empty', async () => {
+      const ctx = makeCtx(1, 2, 'hi')
+      await getMessageHandler(makeChatbot([]))(ctx)
+
+      const lastEdit = ctx.api.editMessageText.mock.calls.at(-1)
+      expect(lastEdit?.[2]).toBe(TELEGRAM_EMPTY_RESPONSE)
     })
 
     it('does not pass command messages to the LLM', async () => {
