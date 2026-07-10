@@ -2,7 +2,7 @@ import type { LLMAdapter, Message } from '../adapters/types.js'
 import type { Retriever } from '../rag/retriever.js'
 import type { FactExtractor } from './factExtractor.js'
 import { createLogger, type Logger } from './logger.js'
-import { DEFAULT_SYSTEM_PROMPT, CONTEXT_USAGE_NOTE } from '../constants.js'
+import { DEFAULT_SYSTEM_PROMPT, DIALOGUE_STYLE_NOTE, CONTEXT_USAGE_NOTE } from '../constants.js'
 
 export interface Chatbot {
   chat(userMessage: string, sessionId: string): AsyncGenerator<string>
@@ -30,10 +30,11 @@ export function createChatbot(
         )
       }
 
+      const basePrompt = `${systemPrompt}\n\n${DIALOGUE_STYLE_NOTE}`
       const systemContent =
         contextParts.length > 0
-          ? `${systemPrompt}\n\n${CONTEXT_USAGE_NOTE}\n\n${contextParts.join('\n\n')}`
-          : systemPrompt
+          ? `${basePrompt}\n\n${CONTEXT_USAGE_NOTE}\n\n${contextParts.join('\n\n')}`
+          : basePrompt
 
       // Replay recent exchanges as real turns so the model stays anchored to the live conversation,
       // rather than reconstructing it from a text blob in the system prompt.

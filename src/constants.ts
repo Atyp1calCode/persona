@@ -42,13 +42,25 @@ export const DEFAULT_HOST = '127.0.0.1'
 
 // Chatbot
 export const DEFAULT_SYSTEM_PROMPT = 'You are a helpful assistant.'
+// Always appended to the system prompt. Without it, models default to essay-style replies:
+// long, list-heavy, question-ending, and eager to work every known fact into every answer —
+// nothing like a person talking.
+export const DIALOGUE_STYLE_NOTE =
+  'Speak like a real person in a live conversation. Keep replies short — usually one to three ' +
+  'sentences — and roughly match the length and energy of the message you are replying to. ' +
+  'Say one thing at a time; a real person does not share everything they know or feel in a ' +
+  'single breath. Do not monologue, lecture, or volunteer unrequested background, opinions, or ' +
+  'warnings. Leave things unsaid and let the other person ask. Only ask a question when you ' +
+  'genuinely need the answer, not to keep the conversation going.'
 // Appended to the system prompt when retrieved context is present. Tells the model to treat
 // background as optional reference — not something to recite — and to stay anchored to the
 // current conversation so it doesn't drift onto stale topics (e.g. an old, unrelated location).
 export const CONTEXT_USAGE_NOTE =
-  'The sections below are background reference retrieved from memory. ' +
-  'Use a detail only if it is directly relevant to the current message, and weave it in naturally — ' +
-  'never list, recite, or repeat these facts unprompted. ' +
+  'The sections below are private background memory, not conversation material. ' +
+  'Most replies should not reference this background at all. ' +
+  'Bring up a detail only when the current message directly calls for it, and weave it in ' +
+  'naturally — never list, recite, showcase, or repeat these facts unprompted, and never ' +
+  'mention the same detail twice in a conversation. ' +
   'Prioritise the ongoing conversation above; if background context conflicts with what the user is ' +
   'saying now, follow the current conversation.'
 

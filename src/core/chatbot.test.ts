@@ -4,7 +4,7 @@ import type { LLMAdapter } from '../adapters/types.js'
 import type { Retriever } from '../rag/retriever.js'
 import type { MemoryRecord } from '../rag/vectorStore.js'
 import type { FactExtractor } from './factExtractor.js'
-import { DEFAULT_SYSTEM_PROMPT } from '../constants.js'
+import { DEFAULT_SYSTEM_PROMPT, DIALOGUE_STYLE_NOTE } from '../constants.js'
 
 function makeRecord(text: string, type: 'lore' | 'chat' = 'lore'): MemoryRecord {
   return { id: '1', text, vector: [], type, sessionId: '', metadata: '{}' }
@@ -46,14 +46,24 @@ describe('createChatbot', () => {
     for await (const _ of createChatbot(llm, retriever).chat('hi', 's1')) {
     }
     const messages = vi.mocked(llm.chat).mock.calls[0][0]
-    expect(messages[0]).toEqual({ role: 'system', content: DEFAULT_SYSTEM_PROMPT })
+    expect(messages[0]).toEqual({
+      role: 'system',
+      content: `${DEFAULT_SYSTEM_PROMPT}\n\n${DIALOGUE_STYLE_NOTE}`,
+    })
   })
 
   it('uses a custom system prompt when provided', async () => {
     for await (const _ of createChatbot(llm, retriever, 'You are a pirate.').chat('hi', 's1')) {
     }
     const messages = vi.mocked(llm.chat).mock.calls[0][0]
-    expect(messages[0].content).toBe('You are a pirate.')
+    expect(messages[0].content).toContain('You are a pirate.')
+  })
+
+  it('always appends the dialogue style note to the system prompt', async () => {
+    for await (const _ of createChatbot(llm, retriever, 'You are a pirate.').chat('hi', 's1')) {
+    }
+    const messages = vi.mocked(llm.chat).mock.calls[0][0]
+    expect(messages[0].content).toContain(DIALOGUE_STYLE_NOTE)
   })
 
   it('passes the user message as the last message', async () => {
@@ -117,11 +127,11 @@ describe('createChatbot', () => {
     ])
   })
 
-  it('does not modify the system prompt when there is no context', async () => {
+  it('adds no context sections to the system prompt when there is no context', async () => {
     for await (const _ of createChatbot(llm, retriever, 'Be helpful.').chat('hi', 's1')) {
     }
     const systemContent = vi.mocked(llm.chat).mock.calls[0][0][0].content
-    expect(systemContent).toBe('Be helpful.')
+    expect(systemContent).toBe(`Be helpful.\n\n${DIALOGUE_STYLE_NOTE}`)
   })
 
   it('saves the full exchange after streaming completes', async () => {
