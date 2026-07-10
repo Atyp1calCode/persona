@@ -29,9 +29,11 @@ export const DEFAULT_RECENT_TURNS = 6
 export const DEFAULT_RECALL_LIMIT = 3
 // Background facts (lore) surfaced per turn.
 export const DEFAULT_LORE_LIMIT = 5
-// Cosine distance cutoff for lore/recall: 0 = identical, 1 = unrelated, 2 = opposite.
-// Matches below this are kept; weaker matches are dropped so irrelevant context isn't injected.
-export const DEFAULT_RELEVANCE_MAX_DISTANCE = 0.6
+// Cosine distance cutoff for recall: 0 = identical, 2 = opposite. Matches below this are kept.
+// The right value depends on the embedding model: text-embedding-3-small puts clearly related
+// pairs around 0.55–0.78 and unrelated ones around 0.82+, so 0.6 silently dropped real matches.
+// Override per model with RELEVANCE_MAX_DISTANCE. Lore is not distance-filtered (see retriever).
+export const DEFAULT_RELEVANCE_MAX_DISTANCE = 0.8
 
 // Web server
 export const DEFAULT_PORT = 3000

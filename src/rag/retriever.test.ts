@@ -99,7 +99,7 @@ describe('createRetriever', () => {
       expect(result.recall.map((r) => r.id)).toEqual(['older'])
     })
 
-    it('drops lore and recall whose distance exceeds the threshold', async () => {
+    it('drops recall whose distance exceeds the threshold but keeps all lore', async () => {
       const near = makeRecord({ id: 'near', type: 'lore', distance: 0.2 })
       const far = makeRecord({ id: 'far', type: 'lore', distance: 0.9 })
       const farRecall = makeExchange({ id: 'farRecall', distance: 0.95 })
@@ -107,7 +107,7 @@ describe('createRetriever', () => {
 
       const result = await createRetriever(store, embedder).retrieve('q', 's1')
 
-      expect(result.lore.map((r) => r.id)).toEqual(['near'])
+      expect(result.lore.map((r) => r.id)).toEqual(['near', 'far'])
       expect(result.recall).toEqual([])
     })
 

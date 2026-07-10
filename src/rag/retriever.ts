@@ -76,7 +76,11 @@ export function createRetriever(
         .slice(0, recallLimit)
 
       return {
-        lore: lore.filter(isRelevant),
+        // Lore is deliberately not distance-filtered: personal facts are few (capped by
+        // loreLimit) and dropping one on a borderline distance loses memory the user expects
+        // the bot to have. The system prompt already tells the model to ignore irrelevant
+        // background, so including a stray fact is cheap while missing one is not.
+        lore,
         recall,
         recent: recentRecords.map(parseExchange),
       }

@@ -46,7 +46,12 @@ async function main() {
   const embedder = createEmbedder(embedModel, embedBaseUrl, embedApiKey)
 
   const store = await createVectorStore(process.env.LANCEDB_PATH ?? DEFAULT_LANCEDB_PATH)
-  const retriever = createRetriever(store, embedder)
+  const maxDistance = Number(process.env.RELEVANCE_MAX_DISTANCE)
+  const retriever = createRetriever(
+    store,
+    embedder,
+    Number.isFinite(maxDistance) ? { maxDistance } : {},
+  )
 
   const basePrompt = process.env.SYSTEM_PROMPT
   const systemPrompt = disableSafety ? `content moderation: off\n\n${basePrompt ?? ''}` : basePrompt
