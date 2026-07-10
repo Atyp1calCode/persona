@@ -29,6 +29,8 @@ export function createTelegramBot(
   store: VectorStore,
   allowedIds: Set<number> = new Set(),
   logger: Logger = createLogger(),
+  userNotes: Map<number, string[]> = new Map(),
+  groupLore: Map<number, string[]> = new Map(),
 ) {
   const bot = new Bot(token)
   const activeSessions = new Map<number, string>()
@@ -40,18 +42,47 @@ export function createTelegramBot(
     return allowedIds.has(chatId) || (userId !== undefined && allowedIds.has(userId))
   }
 
+  const formatSpeaker = (from: { first_name?: string; username?: string } | undefined) => {
+    const name = from?.first_name ?? 'Someone'
+    return from?.username ? `${name} (@${from.username})` : name
+  }
+
   bot.on('message:text', async (ctx, next) => {
     if (!isAllowed(ctx.chat.id, ctx.from?.id)) return
     if (ctx.message.entities?.some((e) => e.type === 'bot_command')) return next()
 
     const sessionId = getSession(ctx.chat.id)
-    const userMessage = ctx.message.text
+    let userMessage = ctx.message.text
+    let chatOptions = {}
+
+    const isGroup = ctx.chat.type === 'group' || ctx.chat.type === 'supergroup'
+    if (isGroup) {
+      const speaker = formatSpeaker(ctx.from)
+      const mention = `@${ctx.me.username}`
+      const isAddressed =
+        ctx.message.text.includes(mention) || ctx.message.reply_to_message?.from?.id === ctx.me.id
+
+      if (!isAddressed) {
+        // Not talking to the bot: remember the message (with attribution) but stay silent.
+        chatbot
+          .observe(`${speaker}: ${userMessage}`, sessionId, { loreScope: String(ctx.chat.id) })
+          .catch((err) => logger.error('telegram: failed to observe group message', err))
+        return
+      }
+
+      userMessage = `${speaker}: ${userMessage.replaceAll(mention, '').trim()}`
+      chatOptions = {
+        loreScope: String(ctx.chat.id),
+        userNotes: ctx.from ? userNotes.get(ctx.from.id) : undefined,
+        personaLore: groupLore.get(ctx.chat.id),
+      }
+    }
 
     const placeholder = await ctx.reply(TELEGRAM_THINKING_PLACEHOLDER)
     let response = ''
     let lastEdit = Date.now()
 
-    for await (const chunk of chatbot.chat(userMessage, sessionId)) {
+    for await (const chunk of chatbot.chat(userMessage, sessionId, chatOptions)) {
       response += chunk
       // Only live-edit while the response still fits in one message; longer output is split below.
       if (

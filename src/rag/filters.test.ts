@@ -16,11 +16,11 @@ describe('quoteLiteral', () => {
 })
 
 describe('chatSessionFilter', () => {
-  it('builds a session-scoped chat filter', () => {
-    expect(chatSessionFilter('s1')).toBe(`type = 'chat' AND "sessionId" = 's1'`)
+  it('builds a session-scoped chat filter with a backtick-quoted column', () => {
+    expect(chatSessionFilter('s1')).toBe("type = 'chat' AND `sessionId` = 's1'")
   })
 
   it('escapes the sessionId', () => {
-    expect(chatSessionFilter("a'b")).toBe(`type = 'chat' AND "sessionId" = 'a''b'`)
+    expect(chatSessionFilter("a'b")).toBe("type = 'chat' AND `sessionId` = 'a''b'")
   })
 })

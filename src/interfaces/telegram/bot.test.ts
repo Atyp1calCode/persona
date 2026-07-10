@@ -27,6 +27,7 @@ function makeChatbot(chunks = ['Hi', ' there']): Chatbot {
     chat: vi.fn().mockImplementation(async function* () {
       for (const c of chunks) yield c
     }),
+    observe: vi.fn().mockResolvedValue(undefined),
   }
 }
 
@@ -49,6 +50,25 @@ function makeCtx(chatId: number, userId: number, text = 'Hello') {
     message: { text },
     reply: vi.fn().mockResolvedValue({ message_id: 42 }),
     api: { editMessageText: vi.fn().mockResolvedValue(undefined) },
+  }
+}
+
+function makeGroupCtx(
+  chatId: number,
+  userId: number,
+  text: string,
+  overrides: { first_name?: string; username?: string; replyToBot?: boolean } = {},
+) {
+  const { first_name = 'Alex', username, replyToBot = false } = overrides
+  return {
+    ...makeCtx(chatId, userId, text),
+    chat: { id: chatId, type: 'supergroup' },
+    from: { id: userId, first_name, username },
+    me: { id: 999000, username: 'persona_bot' },
+    message: {
+      text,
+      reply_to_message: replyToBot ? { from: { id: 999000 } } : undefined,
+    },
   }
 }
 
@@ -163,7 +183,7 @@ describe('createTelegramBot', () => {
       const chatbot = makeChatbot()
       const ctx = makeCtx(777, 456, 'hello')
       await getMessageHandler(chatbot)(ctx)
-      expect(chatbot.chat).toHaveBeenCalledWith('hello', '777')
+      expect(chatbot.chat).toHaveBeenCalledWith('hello', '777', {})
     })
 
     it('registers a message:text event listener', () => {
@@ -176,6 +196,86 @@ describe('createTelegramBot', () => {
       vi.clearAllMocks()
       createTelegramBot('token', makeChatbot(), makeStore())
       expect(mockBotInstance.catch).toHaveBeenCalled()
+    })
+  })
+
+  describe('group chats', () => {
+    function getGroupHandler(
+      chatbot: Chatbot,
+      userNotes?: Map<number, string[]>,
+      groupLore?: Map<number, string[]>,
+    ) {
+      vi.clearAllMocks()
+      createTelegramBot('token', chatbot, makeStore(), undefined, undefined, userNotes, groupLore)
+      return mockBotInstance.on.mock.calls[0][1] as (ctx: unknown) => Promise<void>
+    }
+
+    it('observes un-addressed messages with attribution instead of replying', async () => {
+      const chatbot = makeChatbot()
+      const ctx = makeGroupCtx(-100, 7, 'lunch anyone?', { username: 'alexj' })
+      await getGroupHandler(chatbot)(ctx)
+
+      expect(chatbot.observe).toHaveBeenCalledWith('Alex (@alexj): lunch anyone?', '-100', {
+        loreScope: '-100',
+      })
+      expect(chatbot.chat).not.toHaveBeenCalled()
+      expect(ctx.reply).not.toHaveBeenCalled()
+    })
+
+    it('replies when mentioned, stripping the mention and attributing the speaker', async () => {
+      const chatbot = makeChatbot()
+      const ctx = makeGroupCtx(-100, 7, '@persona_bot what time is it?')
+      await getGroupHandler(chatbot)(ctx)
+
+      expect(chatbot.chat).toHaveBeenCalledWith('Alex: what time is it?', '-100', {
+        loreScope: '-100',
+        userNotes: undefined,
+      })
+      expect(chatbot.observe).not.toHaveBeenCalled()
+    })
+
+    it('replies when the message is a reply to the bot', async () => {
+      const chatbot = makeChatbot()
+      const ctx = makeGroupCtx(-100, 7, 'yes please', { replyToBot: true })
+      await getGroupHandler(chatbot)(ctx)
+
+      expect(chatbot.chat).toHaveBeenCalledWith('Alex: yes please', '-100', {
+        loreScope: '-100',
+        userNotes: undefined,
+      })
+    })
+
+    it("passes the speaker's operator notes when configured", async () => {
+      const chatbot = makeChatbot()
+      const notes = new Map([[7, ['My neighbour', 'Prefers to be called Alex']]])
+      const ctx = makeGroupCtx(-100, 7, '@persona_bot hi')
+      await getGroupHandler(chatbot, notes)(ctx)
+
+      expect(chatbot.chat).toHaveBeenCalledWith('Alex: hi', '-100', {
+        loreScope: '-100',
+        userNotes: ['My neighbour', 'Prefers to be called Alex'],
+      })
+    })
+
+    it("passes the group's persona lore when configured", async () => {
+      const chatbot = makeChatbot()
+      const lore = new Map([[-100, ['You are Annabel']]])
+      const ctx = makeGroupCtx(-100, 7, '@persona_bot hi')
+      await getGroupHandler(chatbot, undefined, lore)(ctx)
+
+      expect(chatbot.chat).toHaveBeenCalledWith('Alex: hi', '-100', {
+        loreScope: '-100',
+        userNotes: undefined,
+        personaLore: ['You are Annabel'],
+      })
+    })
+
+    it('does not observe or attribute in private chats', async () => {
+      const chatbot = makeChatbot()
+      const ctx = makeCtx(777, 456, 'hello')
+      await getMessageHandler(chatbot)(ctx)
+      expect(chatbot.chat).toHaveBeenCalledWith('hello', '777', {})
+      expect(chatbot.observe).not.toHaveBeenCalled()
     })
   })
 
@@ -193,7 +293,7 @@ describe('createTelegramBot', () => {
 
       const msgCtx = makeCtx(100, 1, 'hi')
       await msgHandler(msgCtx)
-      expect(chatbot.chat).toHaveBeenCalledWith('hi', '100:work')
+      expect(chatbot.chat).toHaveBeenCalledWith('hi', '100:work', {})
     })
 
     it('auto-generates a session name when none is provided', async () => {
@@ -241,7 +341,7 @@ describe('createTelegramBot', () => {
 
       const msgCtx = makeCtx(5, 1, 'hello')
       await msgHandler(msgCtx)
-      expect(chatbot.chat).toHaveBeenCalledWith('hello', '5')
+      expect(chatbot.chat).toHaveBeenCalledWith('hello', '5', {})
     })
   })
 
@@ -309,7 +409,7 @@ describe('createTelegramBot', () => {
       await switchHandler(makeCommandCtx(3, 'project'))
       const msgCtx = makeCtx(3, 1, 'hi')
       await msgHandler(msgCtx)
-      expect(chatbot.chat).toHaveBeenCalledWith('hi', '3:project')
+      expect(chatbot.chat).toHaveBeenCalledWith('hi', '3:project', {})
     })
 
     it('switches back to the default session when given "default"', async () => {
@@ -327,7 +427,7 @@ describe('createTelegramBot', () => {
 
       const msgCtx = makeCtx(8, 1, 'hello')
       await msgHandler(msgCtx)
-      expect(chatbot.chat).toHaveBeenCalledWith('hello', '8')
+      expect(chatbot.chat).toHaveBeenCalledWith('hello', '8', {})
     })
   })
 })

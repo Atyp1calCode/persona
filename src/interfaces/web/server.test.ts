@@ -22,6 +22,7 @@ function makeRetriever(overrides: Partial<Retriever> = {}): Retriever {
     retrieve: vi.fn().mockResolvedValue({ lore: [], history: [] }),
     saveExchange: vi.fn().mockResolvedValue(undefined),
     addLore: vi.fn().mockResolvedValue('new-lore-id'),
+    addFact: vi.fn().mockResolvedValue('new-fact-id'),
     ...overrides,
   }
 }
@@ -31,6 +32,7 @@ function makeChatbot(chunks = ['Hello']): Chatbot {
     chat: vi.fn().mockImplementation(async function* () {
       for (const c of chunks) yield c
     }),
+    observe: vi.fn().mockResolvedValue(undefined),
   }
 }
 
@@ -212,6 +214,7 @@ describe('createWebServer', () => {
         chat: vi.fn().mockImplementation(async function* () {
           throw new Error('LLM failed')
         }),
+        observe: vi.fn().mockResolvedValue(undefined),
       }
 
       const res = await request(createWebServer(chatbot, makeRetriever(), makeStore()))

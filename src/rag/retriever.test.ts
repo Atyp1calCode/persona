@@ -60,12 +60,16 @@ describe('createRetriever', () => {
     it('searches lore and session history with their respective limits', async () => {
       await createRetriever(store, embedder).retrieve('query', 'session-1')
 
-      expect(store.search).toHaveBeenCalledWith(VECTOR, DEFAULT_LORE_LIMIT, `type = 'lore'`)
+      expect(store.search).toHaveBeenCalledWith(
+        VECTOR,
+        DEFAULT_LORE_LIMIT,
+        "type = 'lore' AND `sessionId` = ''",
+      )
       // Over-fetches recall so the recent window can be removed without starving recall.
       expect(store.search).toHaveBeenCalledWith(
         VECTOR,
         DEFAULT_RECALL_LIMIT + DEFAULT_RECENT_TURNS,
-        `type = 'chat' AND "sessionId" = 'session-1'`,
+        "type = 'chat' AND `sessionId` = 'session-1'",
       )
     })
 
@@ -133,7 +137,7 @@ describe('createRetriever', () => {
         loreLimit: 4,
       }).retrieve('q', 's1')
 
-      expect(store.search).toHaveBeenCalledWith(VECTOR, 4, `type = 'lore'`)
+      expect(store.search).toHaveBeenCalledWith(VECTOR, 4, "type = 'lore' AND `sessionId` = ''")
       expect(store.search).toHaveBeenCalledWith(VECTOR, 3, expect.stringContaining('chat'))
       expect(store.getRecentBySession).toHaveBeenCalledWith('s1', 2)
     })
@@ -154,6 +158,36 @@ describe('createRetriever', () => {
         sessionId: 'session-1',
       })
       expect(JSON.parse(record.metadata)).toMatchObject({ user: 'hello', assistant: 'hi' })
+    })
+  })
+
+  describe('addFact()', () => {
+    it('stores a novel fact scoped to the chat', async () => {
+      vi.mocked(store.insert).mockResolvedValue(['fact-id'])
+      const id = await createRetriever(store, embedder).addFact('Alex lives in Camden', '-100')
+      expect(id).toBe('fact-id')
+      expect(store.search).toHaveBeenCalledWith(VECTOR, 1, "type = 'lore' AND `sessionId` = '-100'")
+      expect(store.insert).toHaveBeenCalledWith([
+        expect.objectContaining({ text: 'Alex lives in Camden', type: 'lore', sessionId: '-100' }),
+      ])
+    })
+
+    it('skips a fact when a near-duplicate exists in the same scope', async () => {
+      vi.mocked(store.search).mockResolvedValue([
+        makeRecord({ text: 'Alex lives in Camden', distance: 0.05 }),
+      ])
+      const id = await createRetriever(store, embedder).addFact('Alex lives in Camden.', '-100')
+      expect(id).toBeNull()
+      expect(store.insert).not.toHaveBeenCalled()
+    })
+
+    it('stores a fact that is related but not a duplicate', async () => {
+      vi.mocked(store.search).mockResolvedValue([
+        makeRecord({ text: 'Alex lives in Camden', distance: 0.45 }),
+      ])
+      const id = await createRetriever(store, embedder).addFact('Alex works as a nurse', '-100')
+      expect(id).toBe('new-id')
+      expect(store.insert).toHaveBeenCalled()
     })
   })
 

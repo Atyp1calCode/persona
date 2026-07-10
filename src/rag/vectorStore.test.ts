@@ -199,7 +199,7 @@ describe('createVectorStore', () => {
       const store = await createVectorStore('./db')
       await store.deleteBySession('session-abc')
 
-      expect(table.delete).toHaveBeenCalledWith(`type = 'chat' AND "sessionId" = 'session-abc'`)
+      expect(table.delete).toHaveBeenCalledWith("type = 'chat' AND `sessionId` = 'session-abc'")
     })
 
     it('escapes single quotes in the sessionId to prevent filter injection', async () => {
@@ -211,7 +211,7 @@ describe('createVectorStore', () => {
       await store.deleteBySession("s1' OR '1'='1")
 
       expect(table.delete).toHaveBeenCalledWith(
-        `type = 'chat' AND "sessionId" = 's1'' OR ''1''=''1'`,
+        "type = 'chat' AND `sessionId` = 's1'' OR ''1''=''1'",
       )
     })
   })

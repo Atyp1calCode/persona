@@ -1,11 +1,12 @@
 import type { Embedder } from './embedder.js'
 import type { MemoryRecord, VectorStore } from './vectorStore.js'
-import { chatSessionFilter } from './filters.js'
+import { chatSessionFilter, loreScopeFilter } from './filters.js'
 import {
   DEFAULT_RECENT_TURNS,
   DEFAULT_RECALL_LIMIT,
   DEFAULT_LORE_LIMIT,
   DEFAULT_RELEVANCE_MAX_DISTANCE,
+  FACT_DEDUPE_MAX_DISTANCE,
 } from '../constants.js'
 
 export interface Turn {
@@ -30,9 +31,12 @@ export interface RetrieverOptions {
 }
 
 export interface Retriever {
-  retrieve(query: string, sessionId: string): Promise<RetrievedContext>
+  /** `loreScope` limits lore to global entries plus those scoped to that chat ('' = global only). */
+  retrieve(query: string, sessionId: string, loreScope?: string): Promise<RetrievedContext>
   saveExchange(userMsg: string, assistantMsg: string, sessionId: string): Promise<void>
-  addLore(name: string, content: string): Promise<string>
+  addLore(name: string, content: string, scope?: string): Promise<string>
+  /** Stores an extracted fact unless a near-duplicate already exists in the scope; null = skipped. */
+  addFact(content: string, scope: string): Promise<string | null>
 }
 
 function parseExchange(record: MemoryRecord): Turn {
@@ -60,10 +64,10 @@ export function createRetriever(
   const isRelevant = (r: MemoryRecord) => r.distance === undefined || r.distance <= maxDistance
 
   return {
-    async retrieve(query, sessionId) {
+    async retrieve(query, sessionId, loreScope = '') {
       const vector = await embedder.embed(query)
       const [lore, semantic, recentRecords] = await Promise.all([
-        store.search(vector, loreLimit, `type = 'lore'`),
+        store.search(vector, loreLimit, loreScopeFilter(loreScope)),
         // Over-fetch so that, after removing the recent window, recallLimit older matches remain.
         store.search(vector, recallLimit + recentTurns, chatSessionFilter(sessionId)),
         store.getRecentBySession(sessionId, recentTurns),
@@ -105,10 +109,34 @@ export function createRetriever(
       ])
     },
 
-    async addLore(name, content) {
+    async addFact(content, scope) {
+      const vector = await embedder.embed(content)
+      const [nearest] = await store.search(vector, 1, loreScopeFilter(scope))
+      if (nearest?.distance !== undefined && nearest.distance <= FACT_DEDUPE_MAX_DISTANCE) {
+        return null
+      }
+      const [id] = await store.insert([
+        {
+          text: content,
+          vector,
+          type: 'lore',
+          sessionId: scope,
+          metadata: JSON.stringify({ name: 'fact' }),
+        },
+      ])
+      return id
+    },
+
+    async addLore(name, content, scope = '') {
       const vector = await embedder.embed(content)
       const [id] = await store.insert([
-        { text: content, vector, type: 'lore', sessionId: '', metadata: JSON.stringify({ name }) },
+        {
+          text: content,
+          vector,
+          type: 'lore',
+          sessionId: scope,
+          metadata: JSON.stringify({ name }),
+        },
       ])
       return id
     },

@@ -7,6 +7,7 @@ import { createRetriever } from './rag/retriever.js'
 import { createChatbot } from './core/chatbot.js'
 import { createFactExtractor } from './core/factExtractor.js'
 import { createLogger } from './core/logger.js'
+import { parseUserNotes, parseGroupLore } from './interfaces/telegram/config.js'
 import { createWebServer } from './interfaces/web/server.js'
 import { createTelegramBot } from './interfaces/telegram/bot.js'
 import {
@@ -87,7 +88,9 @@ async function main() {
     const allowedIds = process.env.TELEGRAM_ALLOWED_IDS
       ? new Set(process.env.TELEGRAM_ALLOWED_IDS.split(',').map((id) => Number(id.trim())))
       : new Set<number>()
-    const bot = createTelegramBot(token, chatbot, store, allowedIds, logger)
+    const userNotes = parseUserNotes(process.env.TELEGRAM_USER_NOTES, logger)
+    const groupLore = parseGroupLore(process.env.TELEGRAM_GROUP_LORE, logger)
+    const bot = createTelegramBot(token, chatbot, store, allowedIds, logger, userNotes, groupLore)
     console.log('Starting Telegram bot...')
     bot.start()
   }
