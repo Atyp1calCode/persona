@@ -1,12 +1,13 @@
 import { Bot } from 'grammy'
 import type { Chatbot } from '../../core/chatbot.js'
+import type { ThinkingPool } from '../../core/thinkingPool.js'
 import type { VectorStore } from '../../rag/vectorStore.js'
 import { createLogger, type Logger } from '../../core/logger.js'
 import {
   TELEGRAM_THINKING_PLACEHOLDER,
-  TELEGRAM_EDIT_INTERVAL_MS,
   TELEGRAM_MESSAGE_MAX_LENGTH,
   TELEGRAM_EMPTY_RESPONSE,
+  DEFAULT_THINKING_MESSAGES,
 } from '../../constants.js'
 
 /** Splits text into chunks no longer than `max`, preferring to break on newline boundaries. */
@@ -31,6 +32,8 @@ export function createTelegramBot(
   logger: Logger = createLogger(),
   userNotes: Map<number, string[]> = new Map(),
   groupLore: Map<number, string[]> = new Map(),
+  thinkingMessages: string[] = DEFAULT_THINKING_MESSAGES,
+  thinkingPool?: ThinkingPool,
 ) {
   const bot = new Bot(token)
   const activeSessions = new Map<number, string>()
@@ -78,20 +81,19 @@ export function createTelegramBot(
       }
     }
 
-    const placeholder = await ctx.reply(TELEGRAM_THINKING_PLACEHOLDER)
+    // Groups get an in-character thinking line — LLM-generated from the pool when available,
+    // otherwise a random static fallback. Private chats keep the plain placeholder.
+    // The placeholder stays until the full reply is ready — no partial-stream edits.
+    const randomStatic = () => thinkingMessages[Math.floor(Math.random() * thinkingMessages.length)]
+    const thinking = !isGroup
+      ? TELEGRAM_THINKING_PLACEHOLDER
+      : (thinkingPool?.take(ctx.chat.id, groupLore.get(ctx.chat.id)) ??
+        (thinkingMessages.length > 0 ? randomStatic() : TELEGRAM_THINKING_PLACEHOLDER))
+    const placeholder = await ctx.reply(thinking)
     let response = ''
-    let lastEdit = Date.now()
 
     for await (const chunk of chatbot.chat(userMessage, sessionId, chatOptions)) {
       response += chunk
-      // Only live-edit while the response still fits in one message; longer output is split below.
-      if (
-        Date.now() - lastEdit > TELEGRAM_EDIT_INTERVAL_MS &&
-        response.length <= TELEGRAM_MESSAGE_MAX_LENGTH
-      ) {
-        await ctx.api.editMessageText(ctx.chat.id, placeholder.message_id, response).catch(() => {})
-        lastEdit = Date.now()
-      }
     }
 
     const chunks = response.trim()

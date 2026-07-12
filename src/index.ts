@@ -5,9 +5,14 @@ import { createEmbedder } from './rag/embedder.js'
 import { createVectorStore } from './rag/vectorStore.js'
 import { createRetriever } from './rag/retriever.js'
 import { createChatbot } from './core/chatbot.js'
+import { createThinkingPool } from './core/thinkingPool.js'
 import { createFactExtractor } from './core/factExtractor.js'
 import { createLogger } from './core/logger.js'
-import { parseUserNotes, parseGroupLore } from './interfaces/telegram/config.js'
+import {
+  parseUserNotes,
+  parseGroupLore,
+  parseThinkingMessages,
+} from './interfaces/telegram/config.js'
 import { createWebServer } from './interfaces/web/server.js'
 import { createTelegramBot } from './interfaces/telegram/bot.js'
 import {
@@ -90,7 +95,21 @@ async function main() {
       : new Set<number>()
     const userNotes = parseUserNotes(process.env.TELEGRAM_USER_NOTES, logger)
     const groupLore = parseGroupLore(process.env.TELEGRAM_GROUP_LORE, logger)
-    const bot = createTelegramBot(token, chatbot, store, allowedIds, logger, userNotes, groupLore)
+    const thinking = parseThinkingMessages(process.env.TELEGRAM_THINKING_MESSAGES, logger)
+    // Thinking lines are written by the main chat LLM so they match what the persona is
+    // allowed to say; the fallback list covers the pool's cold start.
+    const thinkingPool = createThinkingPool(llm, thinking, logger)
+    const bot = createTelegramBot(
+      token,
+      chatbot,
+      store,
+      allowedIds,
+      logger,
+      userNotes,
+      groupLore,
+      thinking,
+      thinkingPool,
+    )
     console.log('Starting Telegram bot...')
     bot.start()
   }

@@ -49,3 +49,22 @@ export function parseGroupLore(
 ): Map<number, string[]> {
   return parseIdMap(raw, 'chatId', 'lore', 'TELEGRAM_GROUP_LORE', logger)
 }
+
+/**
+ * Parses TELEGRAM_THINKING_MESSAGES: a JSON array of placeholder strings shown in groups while
+ * the reply is being generated. Returns undefined (use built-in defaults) when unset or invalid.
+ */
+export function parseThinkingMessages(
+  raw: string | undefined,
+  logger: Logger = createLogger(),
+): string[] | undefined {
+  if (!raw) return undefined
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed) || parsed.length === 0) throw new Error('expected a JSON array')
+    return parsed.map(String)
+  } catch (err) {
+    logger.error('config: could not parse TELEGRAM_THINKING_MESSAGES, using defaults', err)
+    return undefined
+  }
+}

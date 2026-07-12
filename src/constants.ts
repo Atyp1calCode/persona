@@ -84,7 +84,23 @@ export const CONTEXT_USAGE_NOTE =
 // Telegram
 export const TELEGRAM_API_BASE_URL = 'https://api.telegram.org'
 export const TELEGRAM_THINKING_PLACEHOLDER = '...'
-export const TELEGRAM_EDIT_INTERVAL_MS = 500
+// How many thinking lines the LLM generates per batch, and the pool level that triggers an
+// async refill. Lines longer than the max are discarded (a placeholder should be a glance).
+export const THINKING_POOL_BATCH_SIZE = 12
+export const THINKING_POOL_REFILL_AT = 3
+export const THINKING_LINE_MAX_LENGTH = 80
+// Fallback thinking placeholders, used until the LLM-generated pool has lines (first message
+// after a restart, or when generation fails). Override with TELEGRAM_THINKING_MESSAGES.
+export const DEFAULT_THINKING_MESSAGES = [
+  'hold on, finishing a very inappropriate thought…',
+  'give me a sec, my mind went somewhere filthy…',
+  'thinking… mostly things I shouldn’t say out loud…',
+  'patience. good things come to those who beg…',
+  'hush, I’m having a moment with my imagination…',
+  'dragging my mind out of the gutter… or not…',
+  'wait, I was picturing something. what were we talking about…',
+  'mm, one sec, composing myself. barely…',
+]
 // Hard limit Telegram enforces per message; longer replies must be split across messages.
 export const TELEGRAM_MESSAGE_MAX_LENGTH = 4096
 // Shown when the model returns nothing (Telegram rejects empty message text).

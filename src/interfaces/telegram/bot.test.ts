@@ -5,6 +5,7 @@ import {
   TELEGRAM_THINKING_PLACEHOLDER,
   TELEGRAM_MESSAGE_MAX_LENGTH,
   TELEGRAM_EMPTY_RESPONSE,
+  DEFAULT_THINKING_MESSAGES,
 } from '../../constants.js'
 
 const mockBotInstance = vi.hoisted(() => ({
@@ -255,6 +256,49 @@ describe('createTelegramBot', () => {
         loreScope: '-100',
         userNotes: ['My neighbour', 'Prefers to be called Alex'],
       })
+    })
+
+    it('takes the thinking placeholder from the pool when one is provided', async () => {
+      const chatbot = makeChatbot()
+      const pool = { take: vi.fn().mockReturnValue('generated line…') }
+      const lore = new Map([[-100, ['You are Annabel']]])
+      vi.clearAllMocks()
+      createTelegramBot(
+        'token',
+        chatbot,
+        makeStore(),
+        undefined,
+        undefined,
+        undefined,
+        lore,
+        undefined,
+        pool,
+      )
+      const handler = mockBotInstance.on.mock.calls[0][1] as (ctx: unknown) => Promise<void>
+
+      const ctx = makeGroupCtx(-100, 7, '@persona_bot hi')
+      await handler(ctx)
+
+      expect(pool.take).toHaveBeenCalledWith(-100, ['You are Annabel'])
+      expect(ctx.reply.mock.calls[0][0]).toBe('generated line…')
+    })
+
+    it('uses a random in-character thinking placeholder in groups', async () => {
+      const chatbot = makeChatbot()
+      const ctx = makeGroupCtx(-100, 7, '@persona_bot hi')
+      await getGroupHandler(chatbot)(ctx)
+
+      const placeholderText = ctx.reply.mock.calls[0][0] as string
+      expect(DEFAULT_THINKING_MESSAGES).toContain(placeholderText)
+    })
+
+    it('keeps the placeholder until the full reply, then edits once', async () => {
+      const chatbot = makeChatbot(['chunk1 ', 'chunk2 ', 'chunk3'])
+      const ctx = makeGroupCtx(-100, 7, '@persona_bot hi')
+      await getGroupHandler(chatbot)(ctx)
+
+      expect(ctx.api.editMessageText).toHaveBeenCalledTimes(1)
+      expect(ctx.api.editMessageText).toHaveBeenCalledWith(-100, 42, 'chunk1 chunk2 chunk3')
     })
 
     it("passes the group's persona lore when configured", async () => {

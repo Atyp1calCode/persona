@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { parseUserNotes, parseGroupLore } from './config.js'
+import { parseUserNotes, parseGroupLore, parseThinkingMessages } from './config.js'
 import type { Logger } from '../../core/logger.js'
 
 const logger: Logger = { error: vi.fn() }
@@ -60,5 +60,23 @@ describe('parseGroupLore', () => {
     const log: Logger = { error: vi.fn() }
     expect(parseGroupLore('nope', log).size).toBe(0)
     expect(log.error).toHaveBeenCalled()
+  })
+})
+
+describe('parseThinkingMessages', () => {
+  it('returns undefined when unset so built-in defaults apply', () => {
+    expect(parseThinkingMessages(undefined, logger)).toBeUndefined()
+    expect(parseThinkingMessages('', logger)).toBeUndefined()
+  })
+
+  it('parses a JSON array of strings', () => {
+    expect(parseThinkingMessages('["a…","b…"]', logger)).toEqual(['a…', 'b…'])
+  })
+
+  it('logs and returns undefined on malformed JSON or an empty array', () => {
+    const log: Logger = { error: vi.fn() }
+    expect(parseThinkingMessages('nope', log)).toBeUndefined()
+    expect(parseThinkingMessages('[]', log)).toBeUndefined()
+    expect(log.error).toHaveBeenCalledTimes(2)
   })
 })
