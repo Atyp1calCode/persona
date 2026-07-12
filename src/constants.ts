@@ -20,6 +20,9 @@ export const APP_REFERER = 'http://localhost:3000'
 // Vector store
 export const LANCEDB_TABLE = 'memory'
 export const DEFAULT_SEARCH_LIMIT = 5
+// LanceDB queries silently default to 10 rows unless a limit is set. Every full-scan read
+// must pass an explicit limit or it returns the 10 oldest rows and nothing else.
+export const LANCEDB_SCAN_LIMIT = 1_000_000
 export const DEFAULT_LANCEDB_PATH = './data/lancedb'
 
 // Retrieval

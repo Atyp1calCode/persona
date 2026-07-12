@@ -1,6 +1,6 @@
 import * as lancedb from '@lancedb/lancedb'
 import { randomUUID } from 'crypto'
-import { LANCEDB_TABLE, DEFAULT_SEARCH_LIMIT } from '../constants.js'
+import { LANCEDB_TABLE, DEFAULT_SEARCH_LIMIT, LANCEDB_SCAN_LIMIT } from '../constants.js'
 import { chatSessionFilter } from './filters.js'
 
 export interface MemoryRecord {
@@ -57,7 +57,11 @@ export async function createVectorStore(path: string): Promise<VectorStore> {
 
   async function listByType(type: 'lore' | 'chat'): Promise<MemoryRecord[]> {
     if (!table) return []
-    return (await table.query().where(`type = '${type}'`).toArray()) as unknown as MemoryRecord[]
+    return (await table
+      .query()
+      .where(`type = '${type}'`)
+      .limit(LANCEDB_SCAN_LIMIT)
+      .toArray()) as unknown as MemoryRecord[]
   }
 
   async function del(id: string): Promise<void> {
@@ -70,6 +74,7 @@ export async function createVectorStore(path: string): Promise<VectorStore> {
     const records = (await table
       .query()
       .where(chatSessionFilter(sessionId))
+      .limit(LANCEDB_SCAN_LIMIT)
       .toArray()) as unknown as MemoryRecord[]
     return records
       .sort((a, b) => {

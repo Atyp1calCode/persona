@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { LANCEDB_TABLE, DEFAULT_SEARCH_LIMIT } from '../constants.js'
+import { LANCEDB_TABLE, DEFAULT_SEARCH_LIMIT, LANCEDB_SCAN_LIMIT } from '../constants.js'
 
 const mockDb = vi.hoisted(() => ({
   tableNames: vi.fn(),
@@ -18,7 +18,10 @@ function makeMockTable(results: object[] = []) {
   const where = vi.fn().mockReturnValue({ toArray })
   const limit = vi.fn().mockReturnValue({ where, toArray })
   const distanceType = vi.fn().mockReturnValue({ limit })
-  const queryWhere = vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue(results) })
+  // Full scans chain query().where().limit().toArray() — every scan must set an explicit
+  // limit because LanceDB defaults to 10 rows.
+  const queryLimit = vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue(results) })
+  const queryWhere = vi.fn().mockReturnValue({ limit: queryLimit })
 
   return {
     search: vi.fn().mockReturnValue({ distanceType }),
@@ -30,6 +33,7 @@ function makeMockTable(results: object[] = []) {
     _distanceType: distanceType,
     _toArray: toArray,
     _queryWhere: queryWhere,
+    _queryLimit: queryLimit,
   }
 }
 
@@ -164,6 +168,19 @@ describe('createVectorStore', () => {
 
       expect(table.query).toHaveBeenCalled()
       expect(table._queryWhere).toHaveBeenCalledWith(`type = 'chat'`)
+    })
+
+    it('sets an explicit scan limit so LanceDB does not cap results at its 10-row default', async () => {
+      const table = makeMockTable()
+      mockDb.tableNames.mockResolvedValue([LANCEDB_TABLE])
+      mockDb.openTable.mockResolvedValue(table)
+
+      const store = await createVectorStore('./db')
+      await store.listByType('chat')
+      await store.getRecentBySession('s1', 5)
+
+      expect(table._queryLimit).toHaveBeenCalledTimes(2)
+      expect(table._queryLimit).toHaveBeenCalledWith(LANCEDB_SCAN_LIMIT)
     })
   })
 
