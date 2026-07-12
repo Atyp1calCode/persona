@@ -6,6 +6,7 @@ import {
   TELEGRAM_MESSAGE_MAX_LENGTH,
   TELEGRAM_EMPTY_RESPONSE,
   DEFAULT_THINKING_MESSAGES,
+  THINKING_PREFIX,
 } from '../../constants.js'
 
 const mockBotInstance = vi.hoisted(() => ({
@@ -280,16 +281,17 @@ describe('createTelegramBot', () => {
       await handler(ctx)
 
       expect(pool.take).toHaveBeenCalledWith(-100, ['You are Annabel'])
-      expect(ctx.reply.mock.calls[0][0]).toBe('generated line…')
+      expect(ctx.reply.mock.calls[0][0]).toBe('💭 generated line…')
     })
 
-    it('uses a random in-character thinking placeholder in groups', async () => {
+    it('uses a random in-character thinking placeholder with the thinking prefix in groups', async () => {
       const chatbot = makeChatbot()
       const ctx = makeGroupCtx(-100, 7, '@persona_bot hi')
       await getGroupHandler(chatbot)(ctx)
 
       const placeholderText = ctx.reply.mock.calls[0][0] as string
-      expect(DEFAULT_THINKING_MESSAGES).toContain(placeholderText)
+      expect(placeholderText.startsWith(THINKING_PREFIX)).toBe(true)
+      expect(DEFAULT_THINKING_MESSAGES).toContain(placeholderText.slice(THINKING_PREFIX.length))
     })
 
     it('keeps the placeholder until the full reply, then edits once', async () => {

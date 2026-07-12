@@ -8,6 +8,7 @@ import {
   TELEGRAM_MESSAGE_MAX_LENGTH,
   TELEGRAM_EMPTY_RESPONSE,
   DEFAULT_THINKING_MESSAGES,
+  THINKING_PREFIX,
 } from '../../constants.js'
 
 /** Splits text into chunks no longer than `max`, preferring to break on newline boundaries. */
@@ -85,10 +86,13 @@ export function createTelegramBot(
     // otherwise a random static fallback. Private chats keep the plain placeholder.
     // The placeholder stays until the full reply is ready — no partial-stream edits.
     const randomStatic = () => thinkingMessages[Math.floor(Math.random() * thinkingMessages.length)]
-    const thinking = !isGroup
-      ? TELEGRAM_THINKING_PLACEHOLDER
+    const thinkingLine = !isGroup
+      ? undefined
       : (thinkingPool?.take(ctx.chat.id, groupLore.get(ctx.chat.id)) ??
-        (thinkingMessages.length > 0 ? randomStatic() : TELEGRAM_THINKING_PLACEHOLDER))
+        (thinkingMessages.length > 0 ? randomStatic() : undefined))
+    const thinking = thinkingLine
+      ? `${THINKING_PREFIX}${thinkingLine}`
+      : TELEGRAM_THINKING_PLACEHOLDER
     const placeholder = await ctx.reply(thinking)
     let response = ''
 

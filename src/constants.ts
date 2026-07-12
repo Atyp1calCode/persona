@@ -84,6 +84,8 @@ export const CONTEXT_USAGE_NOTE =
 // Telegram
 export const TELEGRAM_API_BASE_URL = 'https://api.telegram.org'
 export const TELEGRAM_THINKING_PLACEHOLDER = '...'
+// Prepended to group thinking placeholders so they read as status, not as a real reply.
+export const THINKING_PREFIX = '💭 '
 // How many thinking lines the LLM generates per batch, and the pool level that triggers an
 // async refill. Lines longer than the max are discarded (a placeholder should be a glance).
 export const THINKING_POOL_BATCH_SIZE = 12
