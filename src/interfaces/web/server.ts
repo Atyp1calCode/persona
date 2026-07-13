@@ -61,9 +61,19 @@ export function createWebServer(
     res.json({ id })
   })
 
-  app.get('/api/lore', async (_req, res) => {
+  app.get('/api/lore', async (req, res) => {
     const records = await store.listByType('lore')
-    res.json(records.map((r) => ({ id: r.id, text: r.text, ...JSON.parse(r.metadata) })))
+    // scope: '' = global (private-chat lore), a chat id = lore learned in that group.
+    const { scope } = req.query as { scope?: string }
+    const filtered = scope === undefined ? records : records.filter((r) => r.sessionId === scope)
+    res.json(
+      filtered.map((r) => ({
+        id: r.id,
+        text: r.text,
+        scope: r.sessionId,
+        ...JSON.parse(r.metadata),
+      })),
+    )
   })
 
   app.delete('/api/lore/:id', async (req, res) => {

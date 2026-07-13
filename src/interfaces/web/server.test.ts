@@ -67,7 +67,30 @@ describe('createWebServer', () => {
         '/api/lore',
       )
       expect(res.status).toBe(200)
-      expect(res.body).toEqual([{ id: 'l1', text: 'some lore', name: 'World' }])
+      expect(res.body).toEqual([{ id: 'l1', text: 'some lore', scope: '', name: 'World' }])
+    })
+
+    it('filters by scope when the query param is given', async () => {
+      const record = (id: string, sessionId: string) => ({
+        id,
+        text: `lore ${id}`,
+        vector: [],
+        type: 'lore' as const,
+        sessionId,
+        metadata: '{"name":"fact"}',
+      })
+      const store = makeStore({
+        listByType: vi
+          .fn()
+          .mockResolvedValue([record('a', ''), record('b', '-100'), record('c', '-200')]),
+      })
+      const app = createWebServer(makeChatbot(), makeRetriever(), store)
+
+      const groupRes = await request(app).get('/api/lore?scope=-100')
+      expect(groupRes.body.map((r: { id: string }) => r.id)).toEqual(['b'])
+
+      const globalRes = await request(app).get('/api/lore?scope=')
+      expect(globalRes.body.map((r: { id: string }) => r.id)).toEqual(['a'])
     })
   })
 
