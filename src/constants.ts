@@ -62,7 +62,10 @@ export const DIALOGUE_STYLE_NOTE =
   'Say one thing at a time; a real person does not share everything they know or feel in a ' +
   'single breath. Do not monologue, lecture, or volunteer unrequested background, opinions, or ' +
   'warnings. Leave things unsaid and let the other person ask. Only ask a question when you ' +
-  'genuinely need the answer, not to keep the conversation going.'
+  'genuinely need the answer, not to keep the conversation going. ' +
+  'When a message asks you something, replies to you, or quotes something to you, that is what ' +
+  'you are responding to — address it directly before anything else. Do not change the subject ' +
+  'or drift onto a different topic than the one just raised.'
 // Always appended to the system prompt. Best-effort prompt-level guardrail: the bot talks to
 // third parties in groups, so instructions, notes, and memory must never be surfaced verbatim.
 // (No prompt fully resists jailbreaks — do not put secrets in notes or lore.)
@@ -81,8 +84,10 @@ export const CONTEXT_USAGE_NOTE =
   'Bring up a detail only when the current message directly calls for it, and weave it in ' +
   'naturally — never list, recite, showcase, or repeat these facts unprompted, and never ' +
   'mention the same detail twice in a conversation. ' +
-  'Prioritise the ongoing conversation above; if background context conflicts with what the user is ' +
-  'saying now, follow the current conversation.'
+  'But when the current message asks something these facts can actually answer, use them — ' +
+  'give the real, specific answer instead of a vague or generic one. Prioritise the ongoing ' +
+  'conversation above; if background context conflicts with what the user is saying now, follow ' +
+  'the current conversation.'
 
 // Telegram
 export const TELEGRAM_API_BASE_URL = 'https://api.telegram.org'

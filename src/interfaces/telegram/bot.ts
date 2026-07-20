@@ -59,12 +59,24 @@ export function createTelegramBot(
     let userMessage = ctx.message.text
     let chatOptions = {}
 
+    // A reply to someone else's message (not the bot's own) carries context that isn't in
+    // the conversation history — surface it explicitly so the model answers what was quoted
+    // instead of just the bare tag.
+    const quoted = ctx.message.reply_to_message
+    const quotedIsBot = quoted?.from?.id !== undefined && quoted.from.id === ctx.me?.id
+    const quotedText = !quotedIsBot && quoted && 'text' in quoted ? quoted.text : undefined
+    const withQuote = (speaker: string | undefined, body: string) => {
+      const attributed = speaker ? `${speaker}: ${body}` : body
+      return quotedText
+        ? `[Quoting ${formatSpeaker(quoted?.from)}: "${quotedText}"]\n${attributed}`
+        : attributed
+    }
+
     const isGroup = ctx.chat.type === 'group' || ctx.chat.type === 'supergroup'
     if (isGroup) {
       const speaker = formatSpeaker(ctx.from)
       const mention = `@${ctx.me.username}`
-      const isAddressed =
-        ctx.message.text.includes(mention) || ctx.message.reply_to_message?.from?.id === ctx.me.id
+      const isAddressed = ctx.message.text.includes(mention) || quotedIsBot
 
       if (!isAddressed) {
         // Not talking to the bot: remember the message (with attribution) but stay silent.
@@ -74,12 +86,14 @@ export function createTelegramBot(
         return
       }
 
-      userMessage = `${speaker}: ${userMessage.replaceAll(mention, '').trim()}`
+      userMessage = withQuote(speaker, userMessage.replaceAll(mention, '').trim())
       chatOptions = {
         loreScope: String(ctx.chat.id),
         userNotes: ctx.from ? userNotes.get(ctx.from.id) : undefined,
         personaLore: groupLore.get(ctx.chat.id),
       }
+    } else if (quotedText) {
+      userMessage = withQuote(undefined, userMessage)
     }
 
     // Groups get an in-character thinking line — LLM-generated from the pool when available,

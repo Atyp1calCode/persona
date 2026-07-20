@@ -59,9 +59,22 @@ function makeGroupCtx(
   chatId: number,
   userId: number,
   text: string,
-  overrides: { first_name?: string; username?: string; replyToBot?: boolean } = {},
+  overrides: {
+    first_name?: string
+    username?: string
+    replyToBot?: boolean
+    quoted?: { text: string; first_name?: string; username?: string }
+  } = {},
 ) {
-  const { first_name = 'Alex', username, replyToBot = false } = overrides
+  const { first_name = 'Alex', username, replyToBot = false, quoted } = overrides
+  const replyToMessage = replyToBot
+    ? { from: { id: 999000 } }
+    : quoted
+      ? {
+          from: { first_name: quoted.first_name ?? 'Sam', username: quoted.username },
+          text: quoted.text,
+        }
+      : undefined
   return {
     ...makeCtx(chatId, userId, text),
     chat: { id: chatId, type: 'supergroup' },
@@ -69,7 +82,7 @@ function makeGroupCtx(
     me: { id: 999000, username: 'persona_bot' },
     message: {
       text,
-      reply_to_message: replyToBot ? { from: { id: 999000 } } : undefined,
+      reply_to_message: replyToMessage,
     },
   }
 }
@@ -188,6 +201,23 @@ describe('createTelegramBot', () => {
       expect(chatbot.chat).toHaveBeenCalledWith('hello', '777', {})
     })
 
+    it('includes the quoted message as context when replying to a quote in a private chat', async () => {
+      const chatbot = makeChatbot()
+      const ctx = {
+        ...makeCtx(777, 456, 'is that even true?'),
+        message: {
+          text: 'is that even true?',
+          reply_to_message: { from: { first_name: 'Sam' }, text: 'the earth is flat' },
+        },
+      }
+      await getMessageHandler(chatbot)(ctx)
+      expect(chatbot.chat).toHaveBeenCalledWith(
+        '[Quoting Sam: "the earth is flat"]\nis that even true?',
+        '777',
+        {},
+      )
+    })
+
     it('registers a message:text event listener', () => {
       vi.clearAllMocks()
       createTelegramBot('token', makeChatbot(), makeStore())
@@ -237,6 +267,36 @@ describe('createTelegramBot', () => {
     })
 
     it('replies when the message is a reply to the bot', async () => {
+      const chatbot = makeChatbot()
+      const ctx = makeGroupCtx(-100, 7, 'yes please', { replyToBot: true })
+      await getGroupHandler(chatbot)(ctx)
+
+      expect(chatbot.chat).toHaveBeenCalledWith('Alex: yes please', '-100', {
+        loreScope: '-100',
+        userNotes: undefined,
+      })
+    })
+
+    it('includes the quoted message as context when replying to a tagged quote', async () => {
+      const chatbot = makeChatbot()
+      const ctx = makeGroupCtx(-100, 7, '@persona_bot what do you think of this?', {
+        quoted: {
+          text: 'goths are just theater kids in mourning',
+          first_name: 'Sam',
+          username: 'samw',
+        },
+      })
+      await getGroupHandler(chatbot)(ctx)
+
+      expect(chatbot.chat).toHaveBeenCalledWith(
+        '[Quoting Sam (@samw): "goths are just theater kids in mourning"]\n' +
+          'Alex: what do you think of this?',
+        '-100',
+        { loreScope: '-100', userNotes: undefined },
+      )
+    })
+
+    it('does not add quote context when the reply target is the bot itself', async () => {
       const chatbot = makeChatbot()
       const ctx = makeGroupCtx(-100, 7, 'yes please', { replyToBot: true })
       await getGroupHandler(chatbot)(ctx)
