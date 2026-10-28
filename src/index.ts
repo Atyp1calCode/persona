@@ -27,18 +27,32 @@ import {
   DEFAULT_FACT_EXTRACTOR_MODEL,
 } from './constants.js'
 
+function optionalNumber(value: string | undefined): number | undefined {
+  if (value === undefined || value.trim() === '') return undefined
+  const n = Number(value)
+  return Number.isFinite(n) ? n : undefined
+}
+
 async function main() {
   const mode = process.argv[2] ?? 'web'
 
   const disableSafety = process.env.DISABLE_SAFETY === 'true'
+
+  // Sampling for the main persona chat only; the fact extractor stays deterministic.
+  const sampling = {
+    temperature: optionalNumber(process.env.LLM_TEMPERATURE),
+    minP: optionalNumber(process.env.LLM_MIN_P),
+    repetitionPenalty: optionalNumber(process.env.LLM_REPETITION_PENALTY),
+  }
 
   const llm = process.env.OPENROUTER_API_KEY
     ? createOpenRouterAdapter(
         process.env.OPENROUTER_API_KEY,
         process.env.OPENROUTER_MODEL,
         disableSafety,
+        sampling,
       )
-    : createOllamaAdapter(process.env.OLLAMA_URL, process.env.OLLAMA_MODEL)
+    : createOllamaAdapter(process.env.OLLAMA_URL, process.env.OLLAMA_MODEL, sampling)
 
   const usingOpenRouter = Boolean(process.env.OPENROUTER_API_KEY)
   const embedBaseUrl =

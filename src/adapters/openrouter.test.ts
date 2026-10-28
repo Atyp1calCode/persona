@@ -62,6 +62,42 @@ describe('createOpenRouterAdapter', () => {
     expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ stream: true }))
   })
 
+  it('sends sampling defaults as OpenRouter params', async () => {
+    mockCreate.mockResolvedValue({ [Symbol.asyncIterator]: async function* () {} })
+    const adapter = createOpenRouterAdapter('key', undefined, false, {
+      temperature: 0.8,
+      minP: 0.05,
+      repetitionPenalty: 1.05,
+    })
+    for await (const _ of adapter.chat([])) {
+    }
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ temperature: 0.8, min_p: 0.05, repetition_penalty: 1.05 }),
+    )
+  })
+
+  it('lets per-call options override sampling defaults', async () => {
+    mockCreate.mockResolvedValue({ [Symbol.asyncIterator]: async function* () {} })
+    const adapter = createOpenRouterAdapter('key', undefined, false, {
+      temperature: 0.8,
+      minP: 0.05,
+    })
+    for await (const _ of adapter.chat([], { temperature: 0 })) {
+    }
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ temperature: 0, min_p: 0.05 }),
+    )
+  })
+
+  it('omits min_p and repetition_penalty when unset', async () => {
+    mockCreate.mockResolvedValue({ [Symbol.asyncIterator]: async function* () {} })
+    for await (const _ of createOpenRouterAdapter('key').chat([])) {
+    }
+    const body = mockCreate.mock.calls[0][0]
+    expect(body).not.toHaveProperty('min_p')
+    expect(body).not.toHaveProperty('repetition_penalty')
+  })
+
   it('omits safety_settings by default', async () => {
     mockCreate.mockResolvedValue({ [Symbol.asyncIterator]: async function* () {} })
     for await (const _ of createOpenRouterAdapter('key').chat([])) {

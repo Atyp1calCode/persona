@@ -56,4 +56,13 @@ describe('createOllamaAdapter', () => {
     }
     expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ temperature: 0.5 }))
   })
+
+  it('falls back to the default sampling temperature', async () => {
+    mockCreate.mockResolvedValue({ [Symbol.asyncIterator]: async function* () {} })
+    for await (const _ of createOllamaAdapter(undefined, undefined, { temperature: 0.8 }).chat(
+      [],
+    )) {
+    }
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ temperature: 0.8 }))
+  })
 })
